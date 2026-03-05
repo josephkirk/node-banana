@@ -874,10 +874,10 @@ function EaseCurveControls({ node }: { node: Node }) {
 
       {showPresets && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed z-[100] bg-neutral-800 border border-neutral-600 rounded-lg shadow-xl p-2 max-h-96 overflow-y-auto nowheel"
+          className="fixed z-[100] bg-neutral-800 border border-neutral-600 rounded-lg shadow-xl p-2 max-h-[60vh] overflow-y-auto nowheel"
           style={{
             top: presetsButtonRef.current?.getBoundingClientRect().bottom || 0,
-            left: presetsButtonRef.current?.getBoundingClientRect().left || 0,
+            right: window.innerWidth - (presetsButtonRef.current?.getBoundingClientRect().left || 0),
             width: 240,
           }}
         >
