@@ -4,7 +4,34 @@ import { useCallback, useState } from "react";
 import { Handle, Position, NodeProps, Node } from "@xyflow/react";
 import { BaseNode } from "./BaseNode";
 import { useWorkflowStore } from "@/store/workflowStore";
-import { LLMGenerateNodeData } from "@/types";
+import { LLMGenerateNodeData, LLMProvider, LLMModelType } from "@/types";
+import { useInlineParameters } from "@/hooks/useInlineParameters";
+import { InlineParameterPanel } from "./InlineParameterPanel";
+
+// LLM providers and models
+const LLM_PROVIDERS: { value: LLMProvider; label: string }[] = [
+  { value: "google", label: "Google" },
+  { value: "openai", label: "OpenAI" },
+  { value: "anthropic", label: "Anthropic" },
+];
+
+const LLM_MODELS: Record<LLMProvider, { value: LLMModelType; label: string }[]> = {
+  google: [
+    { value: "gemini-3-flash-preview", label: "Gemini 3 Flash" },
+    { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+    { value: "gemini-3-pro-preview", label: "Gemini 3.0 Pro" },
+    { value: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro" },
+  ],
+  openai: [
+    { value: "gpt-4.1-mini", label: "GPT-4.1 Mini" },
+    { value: "gpt-4.1-nano", label: "GPT-4.1 Nano" },
+  ],
+  anthropic: [
+    { value: "claude-sonnet-4.5", label: "Claude Sonnet 4.5" },
+    { value: "claude-haiku-4.5", label: "Claude Haiku 4.5" },
+    { value: "claude-opus-4.6", label: "Claude Opus 4.6" },
+  ],
+};
 
 type LLMGenerateNodeType = Node<LLMGenerateNodeData, "llmGenerate">;
 
@@ -14,6 +41,9 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
 
   const regenerateNode = useWorkflowStore((state) => state.regenerateNode);
   const isRunning = useWorkflowStore((state) => state.isRunning);
+
+  // Inline parameters infrastructure
+  const { inlineParametersEnabled } = useInlineParameters();
 
   const handleRegenerate = useCallback(() => {
     regenerateNode(id);
@@ -36,6 +66,57 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
       }
     }
   }, [nodeData.outputText]);
+
+  // Inline parameters: compute collapse state and toggle handler
+  const isParamsExpanded = nodeData.parametersExpanded ?? true; // default expanded
+
+  const handleToggleParams = useCallback(() => {
+    const nodes = useWorkflowStore.getState().nodes;
+    const node = nodes.find(n => n.id === id);
+    const currentExpanded = (node?.data as LLMGenerateNodeData)?.parametersExpanded ?? true;
+    updateNodeData(id, { parametersExpanded: !currentExpanded });
+  }, [id, updateNodeData]);
+
+  // LLM parameter handlers
+  const handleProviderChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newProvider = e.target.value as LLMProvider;
+      const firstModelForProvider = LLM_MODELS[newProvider][0].value;
+      const updates: Partial<LLMGenerateNodeData> = {
+        provider: newProvider,
+        model: firstModelForProvider,
+      };
+      if (newProvider === "anthropic" && (nodeData.temperature || 0.7) > 1) {
+        updates.temperature = 1;
+      }
+      updateNodeData(id, updates);
+    },
+    [id, nodeData.temperature, updateNodeData]
+  );
+
+  const handleModelChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      updateNodeData(id, { model: e.target.value as LLMModelType });
+    },
+    [id, updateNodeData]
+  );
+
+  const handleTemperatureChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateNodeData(id, { temperature: parseFloat(e.target.value) });
+    },
+    [id, updateNodeData]
+  );
+
+  const handleMaxTokensChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateNodeData(id, { maxTokens: parseInt(e.target.value, 10) });
+    },
+    [id, updateNodeData]
+  );
+
+  const provider = nodeData.provider || "google";
+  const availableModels = LLM_MODELS[provider] || LLM_MODELS.google;
 
   return (
     <BaseNode
@@ -155,6 +236,78 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
           </div>
         )}
       </div>
+
+      {/* Inline parameter panel */}
+      {inlineParametersEnabled && (
+        <InlineParameterPanel
+          expanded={isParamsExpanded}
+          onToggle={handleToggleParams}
+          nodeId={id}
+        >
+          {/* LLM-specific controls with compact styling */}
+          <div className="space-y-1.5">
+            {/* Provider */}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[9px] text-neutral-400 uppercase tracking-wide">Provider</label>
+              <select
+                value={provider}
+                onChange={handleProviderChange}
+                className="nodrag nopan w-full text-[10px] py-0.5 px-1.5 bg-neutral-800/50 border border-neutral-700 rounded focus:outline-none focus:ring-1 focus:ring-neutral-600 text-neutral-300"
+              >
+                {LLM_PROVIDERS.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Model */}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[9px] text-neutral-400 uppercase tracking-wide">Model</label>
+              <select
+                value={nodeData.model || availableModels[0].value}
+                onChange={handleModelChange}
+                className="nodrag nopan w-full text-[10px] py-0.5 px-1.5 bg-neutral-800/50 border border-neutral-700 rounded focus:outline-none focus:ring-1 focus:ring-neutral-600 text-neutral-300"
+              >
+                {availableModels.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Temperature */}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[9px] text-neutral-400 uppercase tracking-wide">
+                Temperature: {(nodeData.temperature ?? 0.7).toFixed(2)}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max={provider === "anthropic" ? "1" : "2"}
+                step="0.01"
+                value={nodeData.temperature ?? 0.7}
+                onChange={handleTemperatureChange}
+                className="nodrag nopan w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
+            </div>
+
+            {/* Max Tokens */}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[9px] text-neutral-400 uppercase tracking-wide">
+                Max Tokens: {(nodeData.maxTokens || 2048).toLocaleString()}
+              </label>
+              <input
+                type="range"
+                min="256"
+                max="16384"
+                step="256"
+                value={nodeData.maxTokens || 2048}
+                onChange={handleMaxTokensChange}
+                className="nodrag nopan w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
+            </div>
+          </div>
+        </InlineParameterPanel>
+      )}
     </BaseNode>
   );
 }

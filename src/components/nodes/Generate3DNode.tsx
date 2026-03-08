@@ -11,6 +11,8 @@ import { ModelSearchDialog } from "@/components/modals/ModelSearchDialog";
 import { useToast } from "@/components/Toast";
 import { ProviderBadge } from "./ProviderBadge";
 import { getModelPageUrl, getProviderDisplayName } from "@/utils/providerUrls";
+import { useInlineParameters } from "@/hooks/useInlineParameters";
+import { InlineParameterPanel } from "./InlineParameterPanel";
 
 // 3D generation capabilities
 const THREE_D_CAPABILITIES: ModelCapability[] = ["text-to-3d", "image-to-3d"];
@@ -22,6 +24,9 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const { replicateApiKey, falApiKey, kieApiKey } = useProviderApiKeys();
   const [isBrowseDialogOpen, setIsBrowseDialogOpen] = useState(false);
+
+  // Inline parameters infrastructure
+  const { inlineParametersEnabled } = useInlineParameters();
 
   // Get the current selected provider (default to fal since most 3D models are there)
   const currentProvider: ProviderType = nodeData.selectedModel?.provider || "fal";
@@ -85,6 +90,16 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
     }
     return "Select 3D model...";
   }, [nodeData.selectedModel?.displayName, nodeData.selectedModel?.modelId]);
+
+  // Inline parameters: compute collapse state and toggle handler
+  const isParamsExpanded = nodeData.parametersExpanded ?? true; // default expanded
+
+  const handleToggleParams = useCallback(() => {
+    const nodes = useWorkflowStore.getState().nodes;
+    const node = nodes.find(n => n.id === id);
+    const currentExpanded = (node?.data as Generate3DNodeData)?.parametersExpanded ?? true;
+    updateNodeData(id, { parametersExpanded: !currentExpanded });
+  }, [id, updateNodeData]);
 
   // Track previous status to detect error transitions
   const prevStatusRef = useRef(nodeData.status);
@@ -397,8 +412,8 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
           </div>
         )}
 
-        {/* Model-specific parameters */}
-        {nodeData.selectedModel?.modelId && (
+        {/* Model-specific parameters (hidden when inline enabled - shown in panel below) */}
+        {!inlineParametersEnabled && nodeData.selectedModel?.modelId && (
           <ModelParameters
             modelId={nodeData.selectedModel.modelId}
             provider={currentProvider}
@@ -407,6 +422,44 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
             onExpandChange={handleParametersExpandChange}
             onInputsLoaded={handleInputsLoaded}
           />
+        )}
+
+        {/* Inline parameter panel */}
+        {inlineParametersEnabled && (
+          <InlineParameterPanel
+            expanded={isParamsExpanded}
+            onToggle={handleToggleParams}
+            nodeId={id}
+          >
+            {/* Model selector: Browse button + current model display */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] text-neutral-200 truncate">
+                  {displayTitle}
+                </div>
+                <div className="text-[9px] text-neutral-500">
+                  {currentProvider}
+                </div>
+              </div>
+              <button
+                onClick={() => setIsBrowseDialogOpen(true)}
+                className="nodrag nopan shrink-0 px-2 py-1 text-[10px] bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 rounded text-neutral-300 transition-colors"
+              >
+                Browse
+              </button>
+            </div>
+
+            {/* External provider parameters - reuse ModelParameters component */}
+            {nodeData.selectedModel?.modelId && (
+              <ModelParameters
+                modelId={nodeData.selectedModel.modelId}
+                provider={currentProvider}
+                parameters={nodeData.parameters || {}}
+                onParametersChange={handleParametersChange}
+                onInputsLoaded={handleInputsLoaded}
+              />
+            )}
+          </InlineParameterPanel>
         )}
       </div>
     </BaseNode>
