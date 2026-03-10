@@ -211,6 +211,12 @@ function ModelParametersInner({
     };
   }, [useGrid]);
 
+  const displaySchema = useMemo(() => {
+    return useGrid && colCount > 1
+      ? reorderColumnFirst(sortedSchema, colCount)
+      : sortedSchema;
+  }, [sortedSchema, useGrid, colCount]);
+
   // Don't render anything for Gemini or if no model selected
   if (provider === "gemini" || !modelId) {
     return null;
@@ -220,12 +226,6 @@ function ModelParametersInner({
   if (!isLoading && schema.length === 0 && !error) {
     return null;
   }
-
-  const displaySchema = useMemo(() => {
-    return useGrid && colCount > 1
-      ? reorderColumnFirst(sortedSchema, colCount)
-      : sortedSchema;
-  }, [sortedSchema, useGrid, colCount]);
 
   return (
     <div className="shrink-0">
