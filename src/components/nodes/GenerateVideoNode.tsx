@@ -131,11 +131,8 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
   const isParamsExpanded = nodeData.parametersExpanded ?? true; // default expanded
 
   const handleToggleParams = useCallback(() => {
-    const nodes = useWorkflowStore.getState().nodes;
-    const node = nodes.find(n => n.id === id);
-    const currentExpanded = (node?.data as GenerateVideoNodeData)?.parametersExpanded ?? true;
-    updateNodeData(id, { parametersExpanded: !currentExpanded });
-  }, [id, updateNodeData]);
+    updateNodeData(id, { parametersExpanded: !isParamsExpanded });
+  }, [id, isParamsExpanded, updateNodeData]);
 
   // Handle provider change
   const handleProviderChange = useCallback(

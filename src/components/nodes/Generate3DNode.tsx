@@ -95,11 +95,8 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
   const isParamsExpanded = nodeData.parametersExpanded ?? true; // default expanded
 
   const handleToggleParams = useCallback(() => {
-    const nodes = useWorkflowStore.getState().nodes;
-    const node = nodes.find(n => n.id === id);
-    const currentExpanded = (node?.data as Generate3DNodeData)?.parametersExpanded ?? true;
-    updateNodeData(id, { parametersExpanded: !currentExpanded });
-  }, [id, updateNodeData]);
+    updateNodeData(id, { parametersExpanded: !isParamsExpanded });
+  }, [id, isParamsExpanded, updateNodeData]);
 
   // Track previous status to detect error transitions
   const prevStatusRef = useRef(nodeData.status);

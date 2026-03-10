@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 
 interface InlineParameterPanelProps {
   expanded: boolean;
@@ -13,7 +13,7 @@ interface InlineParameterPanelProps {
  * Collapsible parameter container for inline display within generation nodes.
  * Provides a chevron toggle button and instant expand/collapse.
  */
-export function InlineParameterPanel({
+function InlineParameterPanelInner({
   expanded,
   onToggle,
   children,
@@ -57,3 +57,6 @@ export function InlineParameterPanel({
     </>
   );
 }
+
+// Memoized export to prevent unnecessary re-renders
+export const InlineParameterPanel = React.memo(InlineParameterPanelInner);

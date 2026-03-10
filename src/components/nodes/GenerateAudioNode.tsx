@@ -198,11 +198,8 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
   const isParamsExpanded = nodeData.parametersExpanded ?? true; // default expanded
 
   const handleToggleParams = useCallback(() => {
-    const nodes = useWorkflowStore.getState().nodes;
-    const node = nodes.find(n => n.id === id);
-    const currentExpanded = (node?.data as GenerateAudioNodeData)?.parametersExpanded ?? true;
-    updateNodeData(id, { parametersExpanded: !currentExpanded });
-  }, [id, updateNodeData]);
+    updateNodeData(id, { parametersExpanded: !isParamsExpanded });
+  }, [id, isParamsExpanded, updateNodeData]);
 
   // Dynamic handles based on inputSchema
   const dynamicHandles = useMemo(() => {
