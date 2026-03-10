@@ -83,7 +83,7 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
         provider: newProvider,
         model: firstModelForProvider,
       };
-      if (newProvider === "anthropic" && (nodeData.temperature || 0.7) > 1) {
+      if (newProvider === "anthropic" && (nodeData.temperature ?? 0.7) > 1) {
         updates.temperature = 1;
       }
       updateNodeData(id, updates);
