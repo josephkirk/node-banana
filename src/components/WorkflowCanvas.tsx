@@ -49,7 +49,7 @@ import {
 
 // Lazy-load GLBViewerNode to avoid bundling three.js for users who don't use 3D nodes
 const GLBViewerNode = dynamic(() => import("./nodes/GLBViewerNode").then(mod => ({ default: mod.GLBViewerNode })), { ssr: false });
-import { EditableEdge, ReferenceEdge } from "./edges";
+import { EditableEdge, ReferenceEdge, SharedEdgeGradients } from "./edges";
 import { ConnectionDropMenu, MenuAction } from "./ConnectionDropMenu";
 import { MultiSelectToolbar } from "./MultiSelectToolbar";
 import { EdgeToolbar } from "./EdgeToolbar";
@@ -2008,6 +2008,7 @@ export function WorkflowCanvas() {
           animated: false,
         }}
       >
+        <SharedEdgeGradients />
         <GroupBackgroundsPortal />
         <GroupControlsOverlay />
         <Background color="#404040" gap={20} size={1} />
