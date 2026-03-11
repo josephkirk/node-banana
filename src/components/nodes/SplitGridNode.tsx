@@ -42,6 +42,7 @@ export function SplitGridNode({ id, data, selected }: NodeProps<SplitGridNodeTyp
         selected={selected}
         hasError={nodeData.status === "error"}
         fullBleed
+        aspectFitMedia={nodeData.sourceImage}
       >
         {/* Image input handle */}
         <Handle
@@ -68,7 +69,7 @@ export function SplitGridNode({ id, data, selected }: NodeProps<SplitGridNodeTyp
             <img
               src={nodeData.sourceImage}
               alt="Source grid"
-              className="w-full h-full object-cover rounded-lg"
+              className="w-full h-full object-contain rounded-lg"
             />
             {/* Grid overlay visualization */}
             <div

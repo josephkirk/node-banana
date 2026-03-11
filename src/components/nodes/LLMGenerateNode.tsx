@@ -130,7 +130,7 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
           nodeId={id}
         >
           {/* LLM-specific controls */}
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 max-w-[280px]">
             {/* Provider */}
             <div className="flex items-center gap-2">
               <label className="text-[11px] text-neutral-400 shrink-0">Provider</label>

@@ -16,6 +16,20 @@ import { getModelPageUrl, getProviderDisplayName } from "@/utils/providerUrls";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
 
+/** Reorder items so they read column-first in a row-based CSS grid.
+ *  e.g. [1,2,3,4,5,6,7,8] with 2 cols → [1,5,2,6,3,7,4,8] */
+function reorderColumnFirst<T>(items: T[], cols: number): T[] {
+  const rows = Math.ceil(items.length / cols);
+  const result: T[] = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const idx = c * rows + r;
+      if (idx < items.length) result.push(items[idx]);
+    }
+  }
+  return result;
+}
+
 // Base 10 aspect ratios (all Gemini image models)
 const BASE_ASPECT_RATIOS: AspectRatio[] = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"];
 
@@ -445,6 +459,33 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
   const resolutions = currentModelId === "nano-banana-2" ? RESOLUTIONS_NB2 : RESOLUTIONS_PRO;
   const hasCarouselImages = (nodeData.imageHistory || []).length > 1;
 
+  // Count visible Gemini controls to match ModelParameters grid/max-width rules
+  const geminiControlCount = 2 // Model + Aspect Ratio (always)
+    + (supportsResolution ? 1 : 0)
+    + (currentModelId === "nano-banana-pro" || currentModelId === "nano-banana-2" ? 1 : 0)
+    + (currentModelId === "nano-banana-2" ? 1 : 0);
+  const useGeminiGrid = geminiControlCount > 4;
+  const geminiGridRef = useRef<HTMLDivElement>(null);
+  const [geminiColCount, setGeminiColCount] = useState(1);
+
+  useEffect(() => {
+    const el = geminiGridRef.current;
+    if (!el || !useGeminiGrid) { setGeminiColCount(1); return; }
+    let rafId: number;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        const cols = getComputedStyle(el).gridTemplateColumns.split(" ").length;
+        setGeminiColCount(prev => prev === cols ? prev : cols);
+      });
+    });
+    observer.observe(el);
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+    };
+  }, [useGeminiGrid]);
+
   // Track previous status to detect error transitions
   const prevStatusRef = useRef(nodeData.status);
 
@@ -508,10 +549,9 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
           nodeId={id}
         >
           {/* Gemini-specific controls */}
-          {isGeminiProvider && currentModelId && (
-            <div className="space-y-1.5">
-              {/* Model selector */}
-              <div className="flex items-center gap-2">
+          {isGeminiProvider && currentModelId && (() => {
+            const controls: React.ReactNode[] = [
+              <div key="model" className="flex items-center gap-2">
                 <label className="text-[11px] text-neutral-400 shrink-0">Model</label>
                 <select
                   value={currentModelId}
@@ -524,10 +564,8 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
                     </option>
                   ))}
                 </select>
-              </div>
-
-              {/* Aspect Ratio */}
-              <div className="flex items-center gap-2">
+              </div>,
+              <div key="aspect-ratio" className="flex items-center gap-2">
                 <label className="text-[11px] text-neutral-400 shrink-0">Aspect Ratio</label>
                 <select
                   value={nodeData.aspectRatio || "1:1"}
@@ -540,11 +578,12 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
                     </option>
                   ))}
                 </select>
-              </div>
+              </div>,
+            ];
 
-              {/* Resolution (if supported) */}
-              {supportsResolution && (
-                <div className="flex items-center gap-2">
+            if (supportsResolution) {
+              controls.push(
+                <div key="resolution" className="flex items-center gap-2">
                   <label className="text-[11px] text-neutral-400 shrink-0">Resolution</label>
                   <select
                     value={nodeData.resolution || "2K"}
@@ -558,11 +597,12 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
                     ))}
                   </select>
                 </div>
-              )}
+              );
+            }
 
-              {/* Google Search toggle */}
-              {(currentModelId === "nano-banana-pro" || currentModelId === "nano-banana-2") && (
-                <label className="flex items-center gap-1.5 text-[11px] text-neutral-300 cursor-pointer">
+            if (currentModelId === "nano-banana-pro" || currentModelId === "nano-banana-2") {
+              controls.push(
+                <label key="google-search" className="flex items-center gap-1.5 text-[11px] text-neutral-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={nodeData.useGoogleSearch || false}
@@ -571,11 +611,12 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
                   />
                   Google Search
                 </label>
-              )}
+              );
+            }
 
-              {/* Image Search toggle (NB2 only) */}
-              {currentModelId === "nano-banana-2" && (
-                <label className="flex items-center gap-1.5 text-[11px] text-neutral-300 cursor-pointer">
+            if (currentModelId === "nano-banana-2") {
+              controls.push(
+                <label key="image-search" className="flex items-center gap-1.5 text-[11px] text-neutral-300 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={nodeData.useImageSearch || false}
@@ -584,9 +625,25 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
                   />
                   Image Search
                 </label>
-              )}
-            </div>
-          )}
+              );
+            }
+
+            const display = useGeminiGrid && geminiColCount > 1
+              ? reorderColumnFirst(controls, geminiColCount)
+              : controls;
+
+            return (
+              <div
+                ref={geminiGridRef}
+                className={useGeminiGrid
+                  ? "grid grid-cols-[repeat(auto-fill,minmax(min(180px,100%),1fr))] max-w-[420px] gap-x-6 gap-y-1.5"
+                  : "space-y-1.5 max-w-[280px]"
+                }
+              >
+                {display}
+              </div>
+            );
+          })()}
 
           {/* External provider parameters - reuse ModelParameters component */}
           {!isGeminiProvider && nodeData.selectedModel?.modelId && (

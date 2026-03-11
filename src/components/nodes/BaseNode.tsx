@@ -77,15 +77,27 @@ export function BaseNode({
   const settingsPanelRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const trackedSettingsHeightRef = useRef(0);
+  const isAnimatingRef = useRef(false);
+  const animationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Adjust node height when settings collapse
+  // Adjust node height when settings expand or collapse
   useLayoutEffect(() => {
+    // Cancel any pending animation timeout from a previous toggle (handles rapid toggling)
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current);
+      animationTimeoutRef.current = null;
+    }
+
+    const contentEl = contentRef.current;
+    const ANIMATION_MS = 160;
+
     if (!settingsExpanded && trackedSettingsHeightRef.current > 0) {
+      // --- COLLAPSE ---
       const heightToRemove = trackedSettingsHeightRef.current;
       trackedSettingsHeightRef.current = 0;
+      isAnimatingRef.current = true;
 
-      // Lock content height to prevent image flicker during resize
-      const contentEl = contentRef.current;
+      // Lock content height for the full animation duration
       if (contentEl) {
         contentEl.style.height = contentEl.offsetHeight + "px";
       }
@@ -99,12 +111,48 @@ export function BaseNode({
         })
       );
 
-      // Release locked height after layout settles
-      requestAnimationFrame(() => {
-        if (contentEl) {
-          contentEl.style.height = "";
+      animationTimeoutRef.current = setTimeout(() => {
+        isAnimatingRef.current = false;
+        if (contentEl) contentEl.style.height = "";
+      }, ANIMATION_MS);
+    } else if (settingsExpanded && settingsPanel) {
+      // --- EXPAND ---
+      // Lock the content wrapper rigid so flex can't redistribute space as the
+      // settings panel grows. Without this, flex-1 + min-h-0 lets the wrapper
+      // shrink between CSS transition frames and the ResizeObserver setNodes catch-up.
+      isAnimatingRef.current = true;
+
+      if (contentEl) {
+        const wrapperEl = contentEl.parentElement as HTMLElement | null;
+        if (wrapperEl) {
+          wrapperEl.style.flex = "none";
+          wrapperEl.style.height = wrapperEl.offsetHeight + "px";
         }
-      });
+      }
+
+      animationTimeoutRef.current = setTimeout(() => {
+        isAnimatingRef.current = false;
+
+        // Apply the final panel height in one shot, then unlock the wrapper
+        const finalHeight = trackedSettingsHeightRef.current;
+        if (finalHeight > 0) {
+          setNodes((nodes) =>
+            nodes.map((node) => {
+              if (node.id !== id) return node;
+              const currentHeight = getNodeDimension(node, "height");
+              return applyNodeDimensions(node, getNodeDimension(node, "width"), currentHeight + finalHeight);
+            })
+          );
+        }
+
+        if (contentEl) {
+          const wrapperEl = contentEl.parentElement as HTMLElement | null;
+          if (wrapperEl) {
+            wrapperEl.style.flex = "";
+            wrapperEl.style.height = "";
+          }
+        }
+      }, ANIMATION_MS);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsExpanded]);
@@ -123,6 +171,10 @@ export function BaseNode({
         if (Math.abs(delta) < 2) continue; // Ignore sub-pixel changes
 
         trackedSettingsHeightRef.current = newPanelHeight;
+
+        // During animation, just track the height — skip setNodes to avoid
+        // multiple re-renders. The expand timeout will apply one final update.
+        if (isAnimatingRef.current) continue;
 
         // Lock content height to prevent image flicker during resize
         const contentEl = contentRef.current;
@@ -152,6 +204,15 @@ export function BaseNode({
     return () => observer.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsExpanded, settingsPanel]);
+
+  // Cleanup animation timeout on unmount
+  useLayoutEffect(() => {
+    return () => {
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleResize: OnResize = useCallback(
     (_event, params) => {

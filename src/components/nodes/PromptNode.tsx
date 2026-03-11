@@ -110,15 +110,17 @@ export function PromptNode({ id, data, selected }: NodeProps<PromptNodeType>) {
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={hasIncomingTextConnection ? "Text from connected node (editable)..." : "Describe what to generate..."}
-          className="nodrag nopan nowheel w-full h-full p-3 text-xs leading-relaxed text-neutral-100 bg-neutral-800 rounded-lg resize-none focus:outline-none placeholder:text-neutral-500"
+          className="nodrag nopan nowheel w-full h-full p-3 pb-7 text-xs leading-relaxed text-neutral-100 bg-neutral-800 rounded-t-lg resize-none focus:outline-none placeholder:text-neutral-500"
         />
-        <button
-          onClick={() => setShowVarDialog(true)}
-          className="nodrag nopan absolute bottom-2 left-3 z-10 text-[10px] text-blue-400 hover:text-blue-300 transition-colors"
-          title="Set variable name"
-        >
-          {nodeData.variableName ? `@${nodeData.variableName}` : "Add variable"}
-        </button>
+        <div className="absolute bottom-0 left-0 right-0 z-10 px-3 py-1.5 bg-neutral-900/80 backdrop-blur-sm rounded-b-lg">
+          <button
+            onClick={() => setShowVarDialog(true)}
+            className="nodrag nopan text-[10px] text-blue-400 hover:text-blue-300 transition-colors"
+            title="Set variable name"
+          >
+            {nodeData.variableName ? `@${nodeData.variableName}` : "Add variable"}
+          </button>
+        </div>
 
         {/* Text output handle */}
         <Handle
