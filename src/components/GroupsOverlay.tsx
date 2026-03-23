@@ -334,7 +334,7 @@ function GroupControls({ groupId, zoom }: GroupControlsProps) {
 
             {/* Expanded controls - shown when menu is open */}
             {showMenu && (
-              <div className="flex items-center gap-0.5">
+              <div className="flex items-center gap-px ml-1">
                 {/* Color Picker */}
                 <div className="relative flex items-center" ref={colorPickerRef}>
                   <button
