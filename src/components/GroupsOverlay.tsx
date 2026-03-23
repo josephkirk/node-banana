@@ -438,16 +438,18 @@ function GroupControls({ groupId, zoom }: GroupControlsProps) {
               </div>
             )}
 
-            {/* Three-dot menu toggle */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); if (showMenu) setShowColorPicker(false); }}
-              className="w-6 h-6 rounded-md flex flex-col items-center justify-center gap-[2px] hover:bg-white/20 transition-colors"
-              title="Group options"
-            >
-              <div className="w-[3px] h-[3px] rounded-full bg-white/70" />
-              <div className="w-[3px] h-[3px] rounded-full bg-white/70" />
-              <div className="w-[3px] h-[3px] rounded-full bg-white/70" />
-            </button>
+            {/* Three-dot menu toggle - hidden when menu is open */}
+            {!showMenu && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowMenu(true); }}
+                className="w-6 h-6 rounded-md flex flex-col items-center justify-center gap-[2px] hover:bg-white/20 transition-colors"
+                title="Group options"
+              >
+                <div className="w-[3px] h-[3px] rounded-full bg-white/70" />
+                <div className="w-[3px] h-[3px] rounded-full bg-white/70" />
+                <div className="w-[3px] h-[3px] rounded-full bg-white/70" />
+              </button>
+            )}
           </div>
         </div>
       </div>
