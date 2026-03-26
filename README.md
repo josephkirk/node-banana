@@ -11,7 +11,7 @@
 <br />
 
 Build AI image and video generation pipelines by connecting nodes on a visual canvas.<br />
-Multi-provider support. Prompt-to-workflow generation. Built mainly with Claude.
+Multi-provider support. Dynamic prompting features. Local, private, BYOK.
 
 <br />
 
