@@ -4,8 +4,8 @@
 
 ### The Visual Workflow Editor for AI Image Generation
 
-[![GitHub stars](https://img.shields.io/github/stars/williavs/node-banana?style=flat&logo=github)](https://github.com/williavs/node-banana/stargazers)
-[![License](https://img.shields.io/github/license/williavs/node-banana?style=flat)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/shrimbly/node-banana?style=flat&logo=github)](https://github.com/shrimbly/node-banana/stargazers)
+[![License](https://img.shields.io/github/license/shrimbly/node-banana?style=flat)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-555?logo=discord)](https://discord.com/invite/89Nr6EKkTf)
 
 <br />
@@ -65,7 +65,7 @@ Node Banana is a node-based workflow editor for AI image generation. Drag nodes 
 ### Quick Start
 
 ```bash
-git clone https://github.com/williavs/node-banana.git
+git clone https://github.com/shrimbly/node-banana.git
 cd node-banana
 npm install
 npm run dev
@@ -148,7 +148,7 @@ Note: This is primarily built for my own workflows. If a PR conflicts with my pl
 
 - **[Discord](https://discord.com/invite/89Nr6EKkTf)** — Chat, get help, and share workflows
 - **[Documentation](https://node-banana-docs.vercel.app/)** — Guides and reference
-- **[GitHub Issues](https://github.com/williavs/node-banana/issues)** — Report bugs and request features
+- **[GitHub Issues](https://github.com/shrimbly/node-banana/issues)** — Report bugs and request features
 
 ## License
 
