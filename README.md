@@ -2,7 +2,7 @@
 
 <img width="full" alt="Node Banana" src="public/node-banana.png" />
 
-### The Visual Workflow Editor for AI Media Generation
+### An Open Visual Workflow Editor for AI APIs
 
 [![GitHub stars](https://img.shields.io/github/stars/shrimbly/node-banana?style=flat&logo=github)](https://github.com/shrimbly/node-banana/stargazers)
 [![License](https://img.shields.io/github/license/shrimbly/node-banana?style=flat)](LICENSE)
@@ -10,8 +10,8 @@
 
 <br />
 
-Build AI image and video generation pipelines by connecting nodes on a visual canvas.<br />
-Multi-provider support. Dynamic prompting features. Local, private, BYOK.
+Build AI image, 3D, audio and video generation pipelines by connecting nodes on a visual canvas.<br />
+Multi-provider support. Dynamic prompting features. Local, private, MIT, BYOK.
 
 <br />
 
@@ -158,15 +158,9 @@ npm run test:coverage # With coverage report
 
 ## Contributing
 
-PRs are welcome! Please branch from `develop` and target `develop` with your PR.
+PRs are welcome! Fork the repo, branch from `develop`, and open a PR back to `develop`.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request targeting `develop`
-
-Note: This is primarily built for my own workflows. If a PR conflicts with my plans I'll politely decline. For larger contributions, join the [Discord](https://discord.com/invite/89Nr6EKkTf) to coordinate.
+This is primarily built for my own workflows — if a PR conflicts with my plans I'll politely decline. For larger contributions, join the [Discord](https://discord.com/invite/89Nr6EKkTf) to coordinate first.
 
 ## Community
 
