@@ -6,6 +6,7 @@ import { QuickstartView } from "@/types/quickstart";
 import { QuickstartInitialView } from "./QuickstartInitialView";
 import { TemplateExplorerView } from "./TemplateExplorerView";
 import { PromptWorkflowView } from "./PromptWorkflowView";
+import { WorkflowBrowserView } from "./WorkflowBrowserView";
 
 interface WelcomeModalProps {
   onWorkflowGenerated: (workflow: WorkflowFile, directoryPath?: string) => void;
@@ -32,35 +33,9 @@ export function WelcomeModal({
     setCurrentView("vibe");
   }, []);
 
-  const handleSelectLoad = useCallback(async () => {
-    try {
-      const browseRes = await fetch("/api/browse-directory");
-      const browseResult = await browseRes.json();
-
-      if (!browseResult.success || browseResult.cancelled || !browseResult.path) {
-        if (!browseResult.success && !browseResult.cancelled) {
-          alert(browseResult.error || "Failed to open directory picker");
-        }
-        return;
-      }
-
-      const dirPath = browseResult.path;
-
-      const loadRes = await fetch(`/api/workflow?path=${encodeURIComponent(dirPath)}&load=true`);
-      const loadResult = await loadRes.json();
-
-      if (!loadResult.success) {
-        alert(loadResult.error || "No workflow file found in directory");
-        return;
-      }
-
-      const workflow = loadResult.workflow as WorkflowFile;
-      onWorkflowGenerated(workflow, dirPath);
-    } catch (error) {
-      console.error("Failed to open workflow:", error);
-      alert("Failed to open workflow. Please try again.");
-    }
-  }, [onWorkflowGenerated]);
+  const handleSelectLoad = useCallback(() => {
+    setCurrentView("browse");
+  }, []);
 
   const handleBack = useCallback(() => {
     setCurrentView("initial");
@@ -75,7 +50,7 @@ export function WelcomeModal({
 
   // Template explorer needs more width for two-column layout
   const dialogWidth = currentView === "templates" ? "max-w-6xl" : "max-w-2xl";
-  const dialogHeight = currentView === "templates" ? "max-h-[85vh]" : "max-h-[80vh]";
+  const dialogHeight = currentView === "templates" || currentView === "browse" ? "max-h-[85vh]" : "max-h-[80vh]";
 
   return (
     <div
@@ -102,6 +77,15 @@ export function WelcomeModal({
           <PromptWorkflowView
             onBack={handleBack}
             onWorkflowGenerated={handleWorkflowSelected}
+          />
+        )}
+        {currentView === "browse" && (
+          <WorkflowBrowserView
+            onBack={handleBack}
+            onWorkflowLoaded={(workflow, dirPath) =>
+              onWorkflowGenerated(workflow, dirPath)
+            }
+            onClose={onClose}
           />
         )}
       </div>
