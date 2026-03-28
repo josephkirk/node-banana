@@ -7,6 +7,29 @@ import { WorkflowFile } from "@/store/workflowStore";
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
+// Mock WorkflowBrowserView (Load workflow now navigates to this view)
+vi.mock("@/components/quickstart/WorkflowBrowserView", () => ({
+  WorkflowBrowserView: ({
+    onBack,
+    onWorkflowLoaded,
+    onClose,
+  }: {
+    onBack: () => void;
+    onWorkflowLoaded: (w: WorkflowFile, p: string) => void;
+    onClose: () => void;
+  }) => (
+    <div data-testid="workflow-browser-view">
+      <button onClick={onBack}>Back</button>
+      <button data-testid="load-workflow-btn" onClick={() => onWorkflowLoaded({ version: 1, nodes: [], edges: [], name: "Test" } as unknown as WorkflowFile, "/test/dir")}>
+        Load
+      </button>
+      <button data-testid="close-browser-btn" onClick={onClose}>
+        Close
+      </button>
+    </div>
+  ),
+}));
+
 // Mock templates
 vi.mock("@/lib/quickstart/templates", () => {
   const template = {
@@ -184,8 +207,8 @@ describe("WelcomeModal", () => {
     });
   });
 
-  describe("File Loading via Directory Picker", () => {
-    it("should call browse-directory API when 'Load workflow' is clicked", () => {
+  describe("Load Workflow via Browser View", () => {
+    it("should show WorkflowBrowserView when 'Load workflow' is clicked", () => {
       render(
         <WelcomeModal
           onWorkflowGenerated={mockOnWorkflowGenerated}
@@ -196,26 +219,10 @@ describe("WelcomeModal", () => {
 
       fireEvent.click(screen.getByText("Load workflow"));
 
-      expect(mockFetch).toHaveBeenCalledWith("/api/browse-directory");
+      expect(screen.getByTestId("workflow-browser-view")).toBeInTheDocument();
     });
 
-    it("should not call onWorkflowGenerated when directory picker is cancelled", async () => {
-      mockFetch.mockImplementation((url: string) => {
-        if (url === "/api/browse-directory") {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ success: true, cancelled: true }),
-          });
-        }
-        if (url === "/api/community-workflows") {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ success: true, workflows: [] }),
-          });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) });
-      });
-
+    it("should navigate back to initial view from browse view", () => {
       render(
         <WelcomeModal
           onWorkflowGenerated={mockOnWorkflowGenerated}
@@ -225,38 +232,13 @@ describe("WelcomeModal", () => {
       );
 
       fireEvent.click(screen.getByText("Load workflow"));
+      expect(screen.getByTestId("workflow-browser-view")).toBeInTheDocument();
 
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith("/api/browse-directory");
-      });
-      expect(mockOnWorkflowGenerated).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByText("Back"));
+      expect(screen.getByText("Node Banana")).toBeInTheDocument();
     });
 
-    it("should call onWorkflowGenerated with workflow and directory path on success", async () => {
-      const mockWorkflow = { version: 1, nodes: [], edges: [], name: "Test" };
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url === "/api/browse-directory") {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ success: true, path: "/path/to/project" }),
-          });
-        }
-        if (typeof url === "string" && url.includes("/api/workflow?")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ success: true, workflow: mockWorkflow, filename: "Test" }),
-          });
-        }
-        if (url === "/api/community-workflows") {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ success: true, workflows: [] }),
-          });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) });
-      });
-
+    it("should call onWorkflowGenerated when a workflow is loaded from browser", () => {
       render(
         <WelcomeModal
           onWorkflowGenerated={mockOnWorkflowGenerated}
@@ -266,51 +248,12 @@ describe("WelcomeModal", () => {
       );
 
       fireEvent.click(screen.getByText("Load workflow"));
+      fireEvent.click(screen.getByTestId("load-workflow-btn"));
 
-      await waitFor(() => {
-        expect(mockOnWorkflowGenerated).toHaveBeenCalledWith(mockWorkflow, "/path/to/project");
-      });
-    });
-
-    it("should show alert when no workflow found in directory", async () => {
-      const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url === "/api/browse-directory") {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ success: true, path: "/empty/dir" }),
-          });
-        }
-        if (typeof url === "string" && url.includes("/api/workflow?")) {
-          return Promise.resolve({
-            ok: false,
-            json: () => Promise.resolve({ success: false, error: "No workflow file found in directory" }),
-          });
-        }
-        if (url === "/api/community-workflows") {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ success: true, workflows: [] }),
-          });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) });
-      });
-
-      render(
-        <WelcomeModal
-          onWorkflowGenerated={mockOnWorkflowGenerated}
-          onClose={mockOnClose}
-          onNewProject={mockOnNewProject}
-        />
+      expect(mockOnWorkflowGenerated).toHaveBeenCalledWith(
+        expect.objectContaining({ version: 1, nodes: [], edges: [] }),
+        "/test/dir"
       );
-
-      fireEvent.click(screen.getByText("Load workflow"));
-
-      await waitFor(() => {
-        expect(alertSpy).toHaveBeenCalledWith("No workflow file found in directory");
-      });
-      expect(mockOnWorkflowGenerated).not.toHaveBeenCalled();
     });
   });
 
