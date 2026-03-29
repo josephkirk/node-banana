@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-03-29
+
+### Added
+
+- **Workflow Browser** — browse, search, and open saved workflows from a new modal (supports nested subdirectories, directory picker, and last-used path memory)
+- **Media Externalization** — videos and audio now save alongside images in the generations/ folder for portable workflows
+- **Optional Inputs & Skip Propagation** — mark input nodes as optional; execution skips downstream nodes when optional inputs are empty
+- **Group Context Menu** — redesigned as a vertical dropdown with color picker, lock toggle, and NBP Input flag
+
+### Fixed
+
+- Video/audio save-load roundtrip (3 compounding bugs)
+- Lock icon now shown on locked groups
+- Error state cleared when navigating generation carousel
+- Various a11y, regex, and dialog semantics fixes
+
+### Performance
+
+- Faster workflow listing by reading only file headers
+
+### Documentation
+
+- Redesigned README with hero layout, all 23 node types, and updated screenshots
+
 ## [1.1.3] - 2026-03-22
 
 ### Fixed
