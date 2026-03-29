@@ -26,12 +26,15 @@ workflow.nodes.forEach((node, index) => {
     const imageCount = node.data.images.filter(img => img && img.startsWith('data:')).length;
 
     if (imageCount > 0) {
+      const removedImages = node.data.images.filter(img => img && img.startsWith('data:'));
+      const removedSize = removedImages.reduce((sum, img) => sum + img.length, 0);
+
       console.log(`\nNode ${index} (${node.id}):`);
       console.log(`  Found ${imageCount} embedded images`);
-      console.log(`  Size: ${(sizeBefore / 1024 / 1024).toFixed(2)} MB`);
+      console.log(`  Size: ${(removedSize / 1024 / 1024).toFixed(2)} MB`);
 
-      node.data.images = [];
-      totalSizeBefore += sizeBefore;
+      node.data.images = node.data.images.filter(img => !(img && img.startsWith('data:')));
+      totalSizeBefore += removedSize;
       cleaned = true;
     }
   }
@@ -43,10 +46,6 @@ workflow.nodes.forEach((node, index) => {
     console.log(`  Size: ${(sizeBefore / 1024 / 1024).toFixed(2)} MB`);
 
     node.data.image = null;
-    node.data.imageRef = undefined;
-    if (node.data.video) {
-      node.data.video = null;
-    }
     totalSizeBefore += sizeBefore;
     cleaned = true;
   }

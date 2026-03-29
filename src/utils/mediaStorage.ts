@@ -1100,9 +1100,13 @@ async function loadMediaById(
       genResult = await response.json();
     }
 
-    const mediaData = mediaType === "video" ? genResult.video : genResult.audio;
     if (!genResult.success) {
       console.log(`${mediaType} not found: ${mediaId}`);
+      return "";
+    }
+    const mediaData = mediaType === "video" ? genResult.video : genResult.audio;
+    if (!mediaData) {
+      console.log(`${mediaType} not found or invalid payload: ${mediaId}`);
       return "";
     }
     loadedMedia.set(mediaId, mediaData);

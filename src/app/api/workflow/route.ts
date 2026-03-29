@@ -189,13 +189,29 @@ export async function GET(request: NextRequest) {
       const entries = await fs.readdir(directoryPath);
       const jsonFiles = entries.filter(f => f.endsWith(".json"));
 
+      // Gather candidates with mtime for deterministic selection (newest first)
+      const candidates: { jsonFile: string; filePath: string; mtime: number }[] = [];
       for (const jsonFile of jsonFiles) {
         try {
           const filePath = path.join(directoryPath, jsonFile);
+          const stat = await fs.stat(filePath);
+          candidates.push({ jsonFile, filePath, mtime: stat.mtimeMs });
+        } catch {
+          continue;
+        }
+      }
+      candidates.sort((a, b) => b.mtime - a.mtime);
+
+      for (const { jsonFile, filePath } of candidates) {
+        try {
           const content = await fs.readFile(filePath, "utf-8");
           const parsed = JSON.parse(content);
 
-          if (parsed.version && parsed.nodes && parsed.edges) {
+          if (
+            typeof parsed.version === "number" &&
+            Array.isArray(parsed.nodes) &&
+            Array.isArray(parsed.edges)
+          ) {
             const filename = path.basename(jsonFile, ".json");
             logger.info('file.load', 'Workflow loaded from directory', {
               directoryPath,
