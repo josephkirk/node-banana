@@ -119,6 +119,11 @@ body {
   background: #3b82f6;
 }
 
+/* Audio handles - purple */
+.react-flow__handle[data-handletype="audio"] {
+  background: #a855f7;
+}
+
 /* 3D handles - orange */
 .react-flow__handle[data-handletype="3d"] {
   background: #f97316;
