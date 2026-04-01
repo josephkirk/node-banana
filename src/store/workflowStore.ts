@@ -1525,7 +1525,9 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       return;
     }
 
-    set({ isRunning: true, currentNodeIds: [nodeId] });
+    // Create AbortController so stopWorkflow() can cancel regeneration
+    const abortController = new AbortController();
+    set({ isRunning: true, currentNodeIds: [nodeId], _abortController: abortController });
 
     await logger.startSession();
     logger.info('node.execution', 'Regenerating node', {
@@ -1534,7 +1536,7 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
     });
 
     try {
-      const executionCtx = get()._buildExecutionContext(node);
+      const executionCtx = get()._buildExecutionContext(node, abortController.signal);
 
       const regenOptions = { useStoredFallback: true };
 
@@ -1559,27 +1561,27 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         await executeSplitGrid(executionCtx);
       } else if (node.type === "videoStitch") {
         await executeVideoStitch(executionCtx);
-        set({ isRunning: false, currentNodeIds: [] });
+        set({ isRunning: false, currentNodeIds: [], _abortController: null });
         await logger.endSession();
         return;
       } else if (node.type === "easeCurve") {
         await executeEaseCurve(executionCtx);
-        set({ isRunning: false, currentNodeIds: [] });
+        set({ isRunning: false, currentNodeIds: [], _abortController: null });
         await logger.endSession();
         return;
       } else if (node.type === "videoTrim") {
         await executeVideoTrim(executionCtx);
-        set({ isRunning: false, currentNodeIds: [] });
+        set({ isRunning: false, currentNodeIds: [], _abortController: null });
         await logger.endSession();
         return;
       } else if (node.type === "videoFrameGrab") {
         await executeVideoFrameGrab(executionCtx);
-        set({ isRunning: false, currentNodeIds: [] });
+        set({ isRunning: false, currentNodeIds: [], _abortController: null });
         await logger.endSession();
         return;
       } else if (node.type === "output") {
         await executeOutput(executionCtx);
-        set({ isRunning: false, currentNodeIds: [] });
+        set({ isRunning: false, currentNodeIds: [], _abortController: null });
         await logger.endSession();
         return;
       }
@@ -1609,7 +1611,7 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       }
 
       logger.info('node.execution', 'Node regeneration completed successfully', { nodeId });
-      set({ isRunning: false, currentNodeIds: [] });
+      set({ isRunning: false, currentNodeIds: [], _abortController: null });
 
       saveLogSession();
       await logger.endSession();
@@ -1621,7 +1623,7 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         status: "error",
         error: error instanceof Error ? error.message : "Regeneration failed",
       });
-      set({ isRunning: false, currentNodeIds: [] });
+      set({ isRunning: false, currentNodeIds: [], _abortController: null });
 
       saveLogSession();
       await logger.endSession();
