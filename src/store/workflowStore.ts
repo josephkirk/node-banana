@@ -235,6 +235,7 @@ interface WorkflowStore {
   addEdgeWithType: (connection: Connection, edgeType: string, edgeDataOverrides?: Record<string, unknown>) => void;
   removeEdge: (edgeId: string) => void;
   toggleEdgePause: (edgeId: string) => void;
+  setLoopCount: (edgeId: string, count: number) => void;
 
   // Copy/Paste operations
   copySelectedNodes: () => void;
@@ -887,6 +888,19 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       edges: state.edges.map((edge) =>
         edge.id === edgeId
           ? { ...edge, data: { ...edge.data, hasPause: !edge.data?.hasPause } }
+          : edge
+      ),
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  setLoopCount: (edgeId: string, count: number) => {
+    const clamped = Math.max(1, Math.min(100, count));
+    pushUndoCheckpoint(get, set);
+    set((state) => ({
+      edges: state.edges.map((edge) =>
+        edge.id === edgeId
+          ? { ...edge, data: { ...edge.data, loopCount: clamped } }
           : edge
       ),
       hasUnsavedChanges: true,

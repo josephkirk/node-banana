@@ -70,6 +70,7 @@ import { stripBinaryData } from "@/lib/chat/contextBuilder";
 import { PromptEditorModal } from "./modals/PromptEditorModal";
 import { PromptConstructorEditorModal } from "./modals/PromptConstructorEditorModal";
 import { resolveTextSourcesThroughRouters } from "@/store/utils/connectedInputs";
+import { wouldCreateCycle } from "@/store/utils/executionUtils";
 import { parseVarTags } from "@/utils/parseVarTags";
 import { AnnotationModal } from "./AnnotationModal";
 import { browseRegistry } from "@/utils/browseRegistry";
@@ -664,7 +665,12 @@ export function WorkflowCanvas() {
               }
             }
             if (resolved.targetHandle) batchUsed.add(resolved.targetHandle);
-            onConnect(resolved);
+            // Check for cycle and mark as loop edge if detected
+            if (wouldCreateCycle(resolved.source!, resolved.target!, edges)) {
+              onConnect(resolved, { isLoop: true, loopCount: 3 });
+            } else {
+              onConnect(resolved);
+            }
             return;
           }
 
@@ -705,7 +711,12 @@ export function WorkflowCanvas() {
           resolved = resolveSwitchHandle(resolved);
           if (resolved.targetHandle) batchUsed.add(resolved.targetHandle);
           if (isValidConnection(resolved)) {
-            onConnect(resolved);
+            // Check for cycle and mark as loop edge if detected
+            if (wouldCreateCycle(resolved.source!, resolved.target!, edges)) {
+              onConnect(resolved, { isLoop: true, loopCount: 3 });
+            } else {
+              onConnect(resolved);
+            }
           }
         });
       } else {
@@ -714,7 +725,12 @@ export function WorkflowCanvas() {
         resolved = resolveRouterHandle(resolved);
         resolved = resolveRouterSourceHandle(resolved);
         resolved = resolveSwitchHandle(resolved);
-        onConnect(resolved);
+        // Check for cycle and mark as loop edge if detected
+        if (wouldCreateCycle(resolved.source!, resolved.target!, edges)) {
+          onConnect(resolved, { isLoop: true, loopCount: 3 });
+        } else {
+          onConnect(resolved);
+        }
       }
     },
     [onConnect, nodes, edges]
