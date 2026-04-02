@@ -1497,33 +1497,34 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         const loopEdge = loopEdges[0];
         const loopBodyIds = new Set(findLoopSubgraph(loopEdge.source, loopEdge.target, forwardEdges));
 
-        // Partition levels into prefix (before loop), loop body, and suffix (after loop)
+        // Expand loop body to include downstream nodes that depend on loop output.
+        // These nodes (e.g. outputGallery connected to a looped generateVideo) should
+        // execute each iteration so they can collect results from every pass.
+        const loopIterationIds = new Set(loopBodyIds);
+        let expanded = true;
+        while (expanded) {
+          expanded = false;
+          for (const edge of forwardEdges) {
+            if (loopIterationIds.has(edge.source) && !loopIterationIds.has(edge.target)) {
+              loopIterationIds.add(edge.target);
+              expanded = true;
+            }
+          }
+        }
+
+        // Partition levels: iterating nodes run each loop pass, non-iterating run once as prefix
         const prefixLevels: typeof levels = [];
         const loopLevels: typeof levels = [];
-        const suffixLevels: typeof levels = [];
-
-        let foundLoop = false;
 
         for (const level of levels) {
-          const hasLoopNode = level.nodeIds.some(id => loopBodyIds.has(id));
+          const iteratingIds = level.nodeIds.filter(id => loopIterationIds.has(id));
+          const nonIteratingIds = level.nodeIds.filter(id => !loopIterationIds.has(id));
 
-          if (!foundLoop && !hasLoopNode) {
-            prefixLevels.push(level);
-          } else if (hasLoopNode) {
-            foundLoop = true;
-            // Filter level to only include loop body nodes
-            const loopNodeIds = level.nodeIds.filter(id => loopBodyIds.has(id));
-            const nonLoopNodeIds = level.nodeIds.filter(id => !loopBodyIds.has(id));
-
-            if (loopNodeIds.length > 0) {
-              loopLevels.push({ level: level.level, nodeIds: loopNodeIds });
-            }
-            // Non-loop nodes at the same level as loop nodes go to suffix
-            if (nonLoopNodeIds.length > 0) {
-              suffixLevels.push({ level: level.level, nodeIds: nonLoopNodeIds });
-            }
-          } else if (foundLoop) {
-            suffixLevels.push(level);
+          if (iteratingIds.length > 0) {
+            loopLevels.push({ level: level.level, nodeIds: iteratingIds });
+          }
+          if (nonIteratingIds.length > 0) {
+            prefixLevels.push({ level: level.level, nodeIds: nonIteratingIds });
           }
         }
 
@@ -1554,14 +1555,8 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
 
           logger.info('node.execution', `Loop iteration ${i + 1}/${loopCount}`);
 
-          // Execute loop body levels with fresh node state
+          // Execute loop body + downstream levels with fresh node state
           await executeLevels(loopLevels);
-        }
-
-        if (!abortController.signal.aborted) {
-          // Execute suffix once
-          logger.info('node.execution', 'Executing suffix levels', { count: suffixLevels.length });
-          await executeLevels(suffixLevels);
         }
       }
 

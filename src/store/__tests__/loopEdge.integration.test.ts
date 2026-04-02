@@ -119,39 +119,48 @@ describe("executeWorkflow with loop edges", () => {
     copyLoopOutputSpy.mockRestore();
   });
 
-  it("executes non-loop prefix and suffix nodes once", async () => {
-    // Create PREFIX(imageInput) → A(prompt) → B(prompt) → SUFFIX(output)
+  it("executes prefix nodes once and downstream nodes each iteration", async () => {
+    // Create PREFIX(imageInput) → A(prompt) → B(prompt) → DOWNSTREAM(output)
     // with loop edge B→A (loopCount: 3)
+    // PREFIX is not downstream of the loop body — it only feeds INTO A
+    // DOWNSTREAM is connected from B (loop body) — it should iterate with the loop
     const prefix = makeNode("prefix", "imageInput", { image: "data:image/png;base64,test" });
     const nodeA = makeNode("a", "prompt", { prompt: "loop start" });
     const nodeB = makeNode("b", "prompt", { prompt: "loop end" });
-    const suffix = makeNode("suffix", "output");
+    const downstream = makeNode("downstream", "output");
 
     const edges = [
       makeEdge("prefix", "a"),
       makeEdge("a", "b"),
-      makeEdge("b", "suffix"),
+      makeEdge("b", "downstream"),
       makeEdge("b", "a", { isLoop: true, loopCount: 3 }),
     ];
 
-    setupStore([prefix, nodeA, nodeB, suffix], edges);
+    setupStore([prefix, nodeA, nodeB, downstream], edges);
 
-    // Spy on updateNodeData to track execution
-    const updateNodeDataSpy = vi.spyOn(useWorkflowStore.getState(), "updateNodeData");
+    // Track which nodes are executed by subscribing to currentNodeIds changes.
+    // Only push when the reference changes (Zustand preserves refs for unchanged fields).
+    const executedNodeIds: string[] = [];
+    let prevRef: string[] = [];
+    const unsubscribe = useWorkflowStore.subscribe((state) => {
+      if (state.currentNodeIds !== prevRef && state.currentNodeIds.length > 0) {
+        executedNodeIds.push(...state.currentNodeIds);
+        prevRef = state.currentNodeIds;
+      }
+    });
 
     await useWorkflowStore.getState().executeWorkflow();
+    unsubscribe();
 
-    // Check that prefix and suffix nodes were updated less frequently than loop nodes
-    // (This is a simplified check - in real execution, loop nodes would be updated more)
-    const prefixUpdates = updateNodeDataSpy.mock.calls.filter((call) => call[0] === "prefix");
-    const suffixUpdates = updateNodeDataSpy.mock.calls.filter((call) => call[0] === "suffix");
-    const loopNodeUpdates = updateNodeDataSpy.mock.calls.filter(
-      (call) => call[0] === "a" || call[0] === "b"
-    );
+    const countExecutions = (id: string) => executedNodeIds.filter((nid) => nid === id).length;
 
-    // Prefix and suffix should have fewer updates than loop nodes
-    expect(prefixUpdates.length).toBeLessThan(loopNodeUpdates.length);
-    expect(suffixUpdates.length).toBeLessThan(loopNodeUpdates.length);
+    // Prefix feeds into the loop but is not downstream — executes once
+    expect(countExecutions("prefix")).toBe(1);
+    // Loop body nodes execute 3 times (loopCount: 3)
+    expect(countExecutions("a")).toBe(3);
+    expect(countExecutions("b")).toBe(3);
+    // Downstream is connected from loop body node B — iterates with the loop
+    expect(countExecutions("downstream")).toBe(3);
   });
 
   it("does not affect workflows with no loop edges", async () => {
