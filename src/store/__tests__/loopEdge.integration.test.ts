@@ -106,16 +106,17 @@ describe("executeWorkflow with loop edges", () => {
     setupStore([nodeA, nodeB, nodeC], edges);
 
     // Spy on copyLoopOutput to count iterations
-    const copyLoopOutputSpy = vi.spyOn(
-      await import("../utils/executionUtils"),
-      "copyLoopOutput"
-    );
+    const executionUtils = await import("../utils/executionUtils");
+    const copyLoopOutputSpy = vi.spyOn(executionUtils, "copyLoopOutput");
+    copyLoopOutputSpy.mockClear(); // Clear any previous calls
 
     await useWorkflowStore.getState().executeWorkflow();
 
     // copyLoopOutput should be called (loopCount - 1) times
     // because first iteration uses original input
     expect(copyLoopOutputSpy).toHaveBeenCalledTimes(2); // 3 iterations - 1 = 2 calls
+
+    copyLoopOutputSpy.mockRestore();
   });
 
   it("executes non-loop prefix and suffix nodes once", async () => {
@@ -179,16 +180,17 @@ describe("executeWorkflow with loop edges", () => {
 
     setupStore([nodeA, nodeB], edges);
 
-    // Spy on copyLoopOutput
-    const copyLoopOutputSpy = vi.spyOn(
-      await import("../utils/executionUtils"),
-      "copyLoopOutput"
-    );
+    // Spy on copyLoopOutput with a fresh mock
+    const executionUtils = await import("../utils/executionUtils");
+    const copyLoopOutputSpy = vi.spyOn(executionUtils, "copyLoopOutput");
+    copyLoopOutputSpy.mockClear(); // Clear any previous calls
 
     await useWorkflowStore.getState().executeWorkflow();
 
     // With loopCount=1, copyLoopOutput should never be called (no iterations to feedback)
     expect(copyLoopOutputSpy).toHaveBeenCalledTimes(0);
+
+    copyLoopOutputSpy.mockRestore();
   });
 
   it("stops loop mid-iteration when aborted", async () => {

@@ -59,6 +59,8 @@ import {
   groupNodesByLevel,
   chunk,
   clearNodeImageRefs,
+  findLoopSubgraph,
+  copyLoopOutput,
 } from "./utils/executionUtils";
 import { getConnectedInputsPure, validateWorkflowPure, type ConnectedInputs } from "./utils/connectedInputs";
 import { evaluateRule } from "./utils/ruleEvaluation";
@@ -1234,16 +1236,6 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       maxConcurrentCalls,
     });
 
-    // Group nodes by level for parallel execution
-    const levels = groupNodesByLevel(nodes, edges);
-
-    // Find starting level if startFromNodeId specified
-    let startLevel = 0;
-    if (startFromNodeId) {
-      const foundLevel = levels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
-      if (foundLevel !== -1) startLevel = foundLevel;
-    }
-
     // Helper to execute a single node - returns true if successful, throws on error
     const executeSingleNode = async (node: WorkflowNode, signal: AbortSignal): Promise<void> => {
       // Check for abort before starting
@@ -1424,26 +1416,28 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         }
     }; // End of executeSingleNode helper
 
-    try {
-      // Execute levels sequentially, but nodes within each level in parallel
+    // Helper to execute a set of levels sequentially, with parallel batches within each level
+    const executeLevels = async (
+      levels: ReturnType<typeof groupNodesByLevel>,
+      startLevel: number = 0
+    ): Promise<void> => {
       for (let levelIdx = startLevel; levelIdx < levels.length; levelIdx++) {
-        // Check if execution was stopped
         if (abortController.signal.aborted || !get().isRunning) break;
 
         const level = levels[levelIdx];
+        // Get fresh node references from the store for each level
+        const currentNodes = get().nodes;
         const levelNodes = level.nodeIds
-          .map((id) => nodes.find((n) => n.id === id))
+          .map((id) => currentNodes.find((n) => n.id === id))
           .filter((n): n is WorkflowNode => n !== undefined);
 
         if (levelNodes.length === 0) continue;
 
-        // Execute nodes in batches respecting concurrency limit
         const batches = chunk(levelNodes, maxConcurrentCalls);
 
         for (const batch of batches) {
           if (abortController.signal.aborted || !get().isRunning) break;
 
-          // Update currentNodeIds to show which nodes are executing
           const batchIds = batch.map((n) => n.id);
           set({ currentNodeIds: batchIds });
 
@@ -1453,12 +1447,10 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
             nodeIds: batchIds,
           });
 
-          // Execute batch in parallel
           const results = await Promise.allSettled(
             batch.map((node) => executeSingleNode(node, abortController.signal))
           );
 
-          // Check for failures with node context (fail-fast behavior)
           for (let i = 0; i < results.length; i++) {
             const r = results[i];
             if (r.status === 'rejected' &&
@@ -1474,6 +1466,102 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
               throw r.reason;
             }
           }
+        }
+      }
+    };
+
+    try {
+      // Partition edges into loop and forward edges
+      const loopEdges = edges.filter(e => e.data?.isLoop);
+      const forwardEdges = edges.filter(e => !e.data?.isLoop);
+
+      // Group nodes by level using ONLY forward edges (loop edges excluded from topological sort)
+      const levels = groupNodesByLevel(nodes, forwardEdges);
+
+      // Find starting level if startFromNodeId specified
+      let startLevel = 0;
+      if (startFromNodeId) {
+        const foundLevel = levels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
+        if (foundLevel !== -1) startLevel = foundLevel;
+      }
+
+      if (loopEdges.length === 0) {
+        // No loops — existing execution path
+        await executeLevels(levels, startLevel);
+      } else {
+        // Warn if multiple loop edges (single loop supported in Phase 48)
+        if (loopEdges.length > 1) {
+          useToast.getState().show("Multiple loop edges detected — only the first loop will execute", "warning");
+        }
+
+        const loopEdge = loopEdges[0];
+        const loopBodyIds = new Set(findLoopSubgraph(loopEdge.source, loopEdge.target, forwardEdges));
+
+        // Partition levels into prefix (before loop), loop body, and suffix (after loop)
+        const prefixLevels: typeof levels = [];
+        const loopLevels: typeof levels = [];
+        const suffixLevels: typeof levels = [];
+
+        let foundLoop = false;
+
+        for (const level of levels) {
+          const hasLoopNode = level.nodeIds.some(id => loopBodyIds.has(id));
+
+          if (!foundLoop && !hasLoopNode) {
+            prefixLevels.push(level);
+          } else if (hasLoopNode) {
+            foundLoop = true;
+            // Filter level to only include loop body nodes
+            const loopNodeIds = level.nodeIds.filter(id => loopBodyIds.has(id));
+            const nonLoopNodeIds = level.nodeIds.filter(id => !loopBodyIds.has(id));
+
+            if (loopNodeIds.length > 0) {
+              loopLevels.push({ level: level.level, nodeIds: loopNodeIds });
+            }
+            // Non-loop nodes at the same level as loop nodes go to suffix
+            if (nonLoopNodeIds.length > 0) {
+              suffixLevels.push({ level: level.level, nodeIds: nonLoopNodeIds });
+            }
+          } else if (foundLoop) {
+            suffixLevels.push(level);
+          }
+        }
+
+        // Execute prefix once
+        logger.info('node.execution', 'Executing prefix levels', { count: prefixLevels.length });
+        await executeLevels(prefixLevels, startLevel);
+
+        // Execute loop N times
+        const loopCount = loopEdge.data?.loopCount ?? 3;
+        for (let i = 0; i < loopCount; i++) {
+          if (abortController.signal.aborted || !get().isRunning) break;
+
+          // Copy output → input between iterations (skip first — uses original input)
+          if (i > 0) {
+            const freshNodes = get().nodes;
+            const sourceNode = freshNodes.find(n => n.id === loopEdge.source);
+            const targetNode = freshNodes.find(n => n.id === loopEdge.target);
+            if (sourceNode && targetNode) {
+              copyLoopOutput(
+                sourceNode,
+                loopEdge.sourceHandle ?? null,
+                targetNode,
+                loopEdge.targetHandle ?? null,
+                get().updateNodeData
+              );
+            }
+          }
+
+          logger.info('node.execution', `Loop iteration ${i + 1}/${loopCount}`);
+
+          // Execute loop body levels with fresh node state
+          await executeLevels(loopLevels);
+        }
+
+        if (!abortController.signal.aborted) {
+          // Execute suffix once
+          logger.info('node.execution', 'Executing suffix levels', { count: suffixLevels.length });
+          await executeLevels(suffixLevels);
         }
       }
 
