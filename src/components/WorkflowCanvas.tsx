@@ -536,7 +536,7 @@ export function WorkflowCanvas() {
         if (!targetNode) return false;
 
         const targetNodeType = targetNode.type;
-        if (targetNodeType === "generateVideo" || targetNodeType === "videoStitch" || targetNodeType === "easeCurve" || targetNodeType === "videoTrim" || targetNodeType === "videoFrameGrab" || targetNodeType === "videoInput" || targetNodeType === "output" || targetNodeType === "router") {
+        if (targetNodeType === "generateVideo" || targetNodeType === "videoStitch" || targetNodeType === "easeCurve" || targetNodeType === "videoTrim" || targetNodeType === "videoFrameGrab" || targetNodeType === "videoInput" || targetNodeType === "output" || targetNodeType === "outputGallery" || targetNodeType === "router") {
           // For output node, we allow video even though its handle is typed as "image"
           // because output node can display both images and videos
           return true;

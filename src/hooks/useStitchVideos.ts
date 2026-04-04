@@ -7,6 +7,7 @@ import {
   VideoSampleSink,
   VideoSampleSource,
   AudioBufferSource,
+  AudioBufferSink,
   BlobSource,
   ALL_FORMATS,
   BufferTarget,
@@ -211,6 +212,68 @@ export async function stitchVideosAsync(
       rotation: aggregateRotation,
     });
 
+    // Extract embedded audio from source videos when no external audio override is provided
+    let effectiveAudioData = audioData ?? null;
+    if (!effectiveAudioData) {
+      updateProgress('processing', 'Extracting audio from source videos...', 8);
+      const allAudioBuffers: AudioBuffer[] = [];
+      let referenceSampleRate: number | null = null;
+      let referenceChannels: number | null = null;
+
+      for (let i = 0; i < videoBlobs.length; i++) {
+        try {
+          const blobSource = new BlobSource(videoBlobs[i]);
+          const input = new Input({ source: blobSource, formats: ALL_FORMATS });
+          try {
+            const audioTracks = await input.getAudioTracks();
+            if (audioTracks.length > 0) {
+              const audioTrack = audioTracks[0];
+              const sink = new AudioBufferSink(audioTrack);
+              const duration = await input.computeDuration();
+              for await (const wrapped of sink.buffers(0, duration)) {
+                if (referenceSampleRate === null) {
+                  referenceSampleRate = wrapped.buffer.sampleRate;
+                  referenceChannels = wrapped.buffer.numberOfChannels;
+                }
+                if (
+                  wrapped.buffer.sampleRate === referenceSampleRate &&
+                  wrapped.buffer.numberOfChannels === referenceChannels
+                ) {
+                  allAudioBuffers.push(wrapped.buffer);
+                }
+              }
+            }
+          } finally {
+            input.dispose();
+          }
+        } catch (err) {
+          console.warn(`Failed to extract audio from video ${i + 1}:`, err);
+        }
+      }
+
+      if (allAudioBuffers.length > 0 && referenceSampleRate && referenceChannels) {
+        const totalSamples = allAudioBuffers.reduce((sum, b) => sum + b.length, 0);
+        const concatenated = new AudioBuffer({
+          length: Math.max(1, totalSamples),
+          numberOfChannels: referenceChannels,
+          sampleRate: referenceSampleRate,
+        });
+
+        let offset = 0;
+        for (const buffer of allAudioBuffers) {
+          for (let ch = 0; ch < referenceChannels; ch++) {
+            concatenated.getChannelData(ch).set(buffer.getChannelData(ch), offset);
+          }
+          offset += buffer.length;
+        }
+
+        effectiveAudioData = {
+          buffer: concatenated,
+          duration: totalSamples / referenceSampleRate,
+        };
+      }
+    }
+
     // Create output
     updateProgress('processing', 'Creating output container...', 10);
 
@@ -226,19 +289,19 @@ export async function stitchVideosAsync(
 
     output.addVideoTrack(videoSource, { rotation: aggregateRotation, frameRate: MAX_OUTPUT_FPS });
 
-    // Add audio track if provided
+    // Add audio track if provided (external audio input or extracted from source videos)
     let audioSource: AudioBufferSource | null = null;
     let pendingAudioBuffer: AudioBuffer | null = null;
     let outputStarted = false;
 
-    if (audioData) {
+    if (effectiveAudioData) {
       updateProgress('processing', 'Detecting supported audio codec...', 8);
 
       // Detect the best supported audio codec for MP4
       // Try common codecs in order of preference: aac, mp3 (no opus - Twitter doesn't support it)
       const audioCodec = await getFirstEncodableAudioCodec(['aac', 'mp3'], {
-        numberOfChannels: audioData.buffer.numberOfChannels,
-        sampleRate: audioData.buffer.sampleRate,
+        numberOfChannels: effectiveAudioData.buffer.numberOfChannels,
+        sampleRate: effectiveAudioData.buffer.sampleRate,
         bitrate: 128000,
       });
 
@@ -255,7 +318,7 @@ export async function stitchVideosAsync(
         });
 
         output.addAudioTrack(audioSource);
-        pendingAudioBuffer = audioData.buffer;
+        pendingAudioBuffer = effectiveAudioData.buffer;
       }
     }
 
@@ -267,7 +330,7 @@ export async function stitchVideosAsync(
     // Writing audio after all video causes broken interleaving (Discord won't play audio).
     if (audioSource && pendingAudioBuffer) {
       updateProgress('processing', 'Encoding audio track...', 12);
-      const trimTarget = probedVideoDuration > 0 ? probedVideoDuration : audioData!.duration;
+      const trimTarget = probedVideoDuration > 0 ? probedVideoDuration : effectiveAudioData!.duration;
       const trimmedBuffer = trimAudioBuffer(pendingAudioBuffer, trimTarget);
       await audioSource.add(trimmedBuffer);
       await audioSource.close();

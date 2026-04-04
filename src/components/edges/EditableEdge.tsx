@@ -103,6 +103,32 @@ export function EditableEdge({
 
   // Calculate the path based on edge style
   const [edgePath, labelX, labelY] = useMemo(() => {
+    // Loop edges: smooth arc that exits/enters along handle directions, bowed below nodes
+    if (edgeData?.isLoop) {
+      const dist = Math.sqrt((targetX - sourceX) ** 2 + (targetY - sourceY) ** 2);
+      const extent = Math.max(100, dist * 0.4);
+      const drop = Math.max(120, dist * 0.4);
+
+      // Direction vectors matching handle positions
+      const dir: Record<string, [number, number]> = {
+        top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0],
+      };
+      const [sdx, sdy] = dir[sourcePosition] ?? [1, 0];
+      const [tdx, tdy] = dir[targetPosition] ?? [-1, 0];
+
+      // Follow handle direction + push arc below the nodes
+      const cp1x = sourceX + sdx * extent;
+      const cp1y = sourceY + sdy * extent + drop;
+      const cp2x = targetX + tdx * extent;
+      const cp2y = targetY + tdy * extent + drop;
+
+      const path = `M${sourceX},${sourceY} C${cp1x},${cp1y} ${cp2x},${cp2y} ${targetX},${targetY}`;
+      // Label at bezier midpoint (t=0.5)
+      const lx = 0.125 * sourceX + 0.375 * cp1x + 0.375 * cp2x + 0.125 * targetX;
+      const ly = 0.125 * sourceY + 0.375 * cp1y + 0.375 * cp2y + 0.125 * targetY;
+      return [path, lx, ly] as [string, number, number];
+    }
+
     if (edgeStyle === "curved") {
       return getBezierPath({
         sourceX,
@@ -125,7 +151,7 @@ export function EditableEdge({
         offset: offsetX,
       });
     }
-  }, [edgeStyle, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, offsetX]);
+  }, [edgeStyle, edgeData?.isLoop, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, offsetX]);
 
   // Calculate handle positions on the path segments (only for angular mode)
   const handlePositions = useMemo(() => {
