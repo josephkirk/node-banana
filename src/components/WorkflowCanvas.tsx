@@ -168,7 +168,7 @@ const getNodeHandles = (nodeType: string): { inputs: string[]; outputs: string[]
     case "output":
       return { inputs: ["image", "video", "audio"], outputs: [] };
     case "outputGallery":
-      return { inputs: ["image"], outputs: [] };
+      return { inputs: ["image", "video"], outputs: [] };
     case "imageCompare":
       return { inputs: ["image"], outputs: [] };
     case "videoStitch":

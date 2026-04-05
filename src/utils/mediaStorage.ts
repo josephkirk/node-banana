@@ -469,10 +469,10 @@ async function externalizeNodeMedia(
       }
 
       // Build cleaned arrays: clear base64 data where refs exist, keep HTTP URLs
-      const cleanedImages = d.images.map((img, i) =>
+      const cleanedImages = (d.images || []).map((img, i) =>
         galleryImageRefs[i] && isDataUrl(img) ? "" : img
       );
-      const cleanedVideos = d.videos.map((vid, i) =>
+      const cleanedVideos = (d.videos || []).map((vid, i) =>
         galleryVideoRefs[i] && isDataUrl(vid) ? "" : vid
       );
 
@@ -1062,11 +1062,31 @@ async function hydrateNodeMedia(
         }
       }
 
-      // Filter out any empty entries that failed to hydrate
+      // Filter out any empty entries that failed to hydrate, keeping refs in sync
+      const filteredImages: string[] = [];
+      const filteredImageRefs: string[] = [];
+      for (let i = 0; i < images.length; i++) {
+        if (images[i] && images[i] !== "") {
+          filteredImages.push(images[i]);
+          if (d.imageRefs?.[i]) filteredImageRefs.push(d.imageRefs[i]);
+          else filteredImageRefs.push("");
+        }
+      }
+      const filteredVideos: string[] = [];
+      const filteredVideoRefs: string[] = [];
+      for (let i = 0; i < videos.length; i++) {
+        if (videos[i] && videos[i] !== "") {
+          filteredVideos.push(videos[i]);
+          if (d.videoRefs?.[i]) filteredVideoRefs.push(d.videoRefs[i]);
+          else filteredVideoRefs.push("");
+        }
+      }
       newData = {
         ...d,
-        images: images.filter(img => img && img !== ""),
-        videos: videos.filter(vid => vid && vid !== ""),
+        images: filteredImages,
+        imageRefs: filteredImageRefs.some(r => r !== "") ? filteredImageRefs : d.imageRefs,
+        videos: filteredVideos,
+        videoRefs: filteredVideoRefs.some(r => r !== "") ? filteredVideoRefs : d.videoRefs,
       };
       break;
     }
