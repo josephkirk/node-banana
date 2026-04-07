@@ -308,6 +308,9 @@ export interface OutputNodeData extends BaseNodeData {
  */
 export interface OutputGalleryNodeData extends BaseNodeData {
   images: string[]; // Array of base64 data URLs from connected nodes
+  imageRefs?: string[]; // External storage refs for images
+  videos: string[]; // Array of video URLs from connected nodes
+  videoRefs?: string[]; // External storage refs for videos
 }
 
 /**

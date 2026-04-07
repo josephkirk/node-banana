@@ -11,6 +11,8 @@ import { Edge } from "@xyflow/react";
 export interface WorkflowEdgeData extends Record<string, unknown> {
   hasPause?: boolean;
   createdAt?: number;
+  isLoop?: boolean;
+  loopCount?: number;
 }
 
 // Workflow Edge

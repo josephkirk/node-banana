@@ -15,6 +15,7 @@ const EDGE_COLORS: Record<string, string> = {
   text: "#2563eb",
   "3d": "#06b6d4",
   easeCurve: "#f59e0b",
+  loop: "#d946ef",
 };
 
 const SELECTION_STATES = ["active", "dimmed"] as const;

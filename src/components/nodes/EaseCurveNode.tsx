@@ -11,7 +11,6 @@ import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
 
 type EaseCurveNodeType = Node<EaseCurveNodeData, "easeCurve">;
 
-const VIDEO_HEIGHT = 320;
 
 export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeType>) {
   const nodeData = data;
@@ -120,7 +119,6 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         selected={selected}
         fullBleed
         minWidth={340}
-        minHeight={VIDEO_HEIGHT}
       >
         {renderHandles()}
         <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center px-4">
@@ -151,7 +149,6 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         selected={selected}
         fullBleed
         minWidth={340}
-        minHeight={VIDEO_HEIGHT}
       >
         {renderHandles()}
         <div className="flex-1 flex items-center justify-center">
@@ -175,7 +172,6 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
       isExecuting={isRunning}
       hasError={nodeData.status === "error"}
       minWidth={340}
-      minHeight={VIDEO_HEIGHT}
       aspectFitMedia={nodeData.outputVideo}
     >
       {renderHandles()}

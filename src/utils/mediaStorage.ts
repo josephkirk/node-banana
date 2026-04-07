@@ -436,9 +436,57 @@ async function externalizeNodeMedia(
 
     case "outputGallery": {
       const d = data as import("@/types").OutputGalleryNodeData;
-      // OutputGallery content is regenerated on each workflow run
-      // Clear images array to keep workflow file small
-      newData = { ...d, images: [] };
+      const galleryImageRefs: string[] = d.imageRefs ? [...d.imageRefs] : [];
+      const galleryVideoRefs: string[] = d.videoRefs ? [...d.videoRefs] : [];
+
+      // Externalize gallery images
+      for (let i = 0; i < (d.images?.length || 0); i++) {
+        const img = d.images[i];
+        const existingRef = galleryImageRefs[i];
+        if (existingRef && isDataUrl(img)) {
+          // Already has ref, just keep it
+        } else if (isDataUrl(img)) {
+          galleryImageRefs[i] = await saveImageAndGetId(img, workflowPath, savedImageIds, "generations");
+        } else if (isHttpUrl(img)) {
+          // Keep HTTP URLs inline (small, no ref needed)
+          galleryImageRefs[i] = ""; // placeholder to keep indices aligned
+        }
+      }
+
+      // Externalize gallery videos
+      for (let i = 0; i < (d.videos?.length || 0); i++) {
+        const vid = d.videos[i];
+        const existingRef = galleryVideoRefs[i];
+        if (existingRef && isDataUrl(vid)) {
+          // Already has ref, just keep it
+        } else if (isDataUrl(vid)) {
+          const ref = await saveVideoAndGetRef(vid, workflowPath, savedMediaIds);
+          if (ref) galleryVideoRefs[i] = ref;
+        } else if (isHttpUrl(vid)) {
+          // Keep HTTP URLs inline (small, no ref needed)
+          galleryVideoRefs[i] = ""; // placeholder to keep indices aligned
+        }
+      }
+
+      // Build cleaned arrays: clear base64 data where refs exist, keep HTTP URLs
+      const cleanedImages = (d.images || []).map((img, i) =>
+        galleryImageRefs[i] && isDataUrl(img) ? "" : img
+      );
+      const cleanedVideos = (d.videos || []).map((vid, i) =>
+        galleryVideoRefs[i] && isDataUrl(vid) ? "" : vid
+      );
+
+      // Filter out empty placeholders from refs
+      const hasImageRefs = galleryImageRefs.some(r => r && r !== "");
+      const hasVideoRefs = galleryVideoRefs.some(r => r && r !== "");
+
+      newData = {
+        ...d,
+        images: cleanedImages,
+        imageRefs: hasImageRefs ? galleryImageRefs : undefined,
+        videos: cleanedVideos,
+        videoRefs: hasVideoRefs ? galleryVideoRefs : undefined,
+      };
       break;
     }
 
@@ -990,8 +1038,56 @@ async function hydrateNodeMedia(
     }
 
     case "outputGallery": {
-      // OutputGallery content is not persisted - it's regenerated on each workflow run
-      newData = data;
+      const d = data as import("@/types").OutputGalleryNodeData;
+      const images = [...(d.images || [])];
+      const videos = [...(d.videos || [])];
+
+      // Hydrate images from refs
+      if (d.imageRefs && d.imageRefs.length > 0) {
+        for (let i = 0; i < d.imageRefs.length; i++) {
+          const ref = d.imageRefs[i];
+          if (ref && ref !== "" && (!images[i] || images[i] === "")) {
+            images[i] = await loadMediaById(ref, workflowPath, loadedMedia, "image");
+          }
+        }
+      }
+
+      // Hydrate videos from refs
+      if (d.videoRefs && d.videoRefs.length > 0) {
+        for (let i = 0; i < d.videoRefs.length; i++) {
+          const ref = d.videoRefs[i];
+          if (ref && ref !== "" && (!videos[i] || videos[i] === "")) {
+            videos[i] = await loadMediaById(ref, workflowPath, loadedMedia, "video");
+          }
+        }
+      }
+
+      // Filter out any empty entries that failed to hydrate, keeping refs in sync
+      const filteredImages: string[] = [];
+      const filteredImageRefs: string[] = [];
+      for (let i = 0; i < images.length; i++) {
+        if (images[i] && images[i] !== "") {
+          filteredImages.push(images[i]);
+          if (d.imageRefs?.[i]) filteredImageRefs.push(d.imageRefs[i]);
+          else filteredImageRefs.push("");
+        }
+      }
+      const filteredVideos: string[] = [];
+      const filteredVideoRefs: string[] = [];
+      for (let i = 0; i < videos.length; i++) {
+        if (videos[i] && videos[i] !== "") {
+          filteredVideos.push(videos[i]);
+          if (d.videoRefs?.[i]) filteredVideoRefs.push(d.videoRefs[i]);
+          else filteredVideoRefs.push("");
+        }
+      }
+      newData = {
+        ...d,
+        images: filteredImages,
+        imageRefs: filteredImageRefs.some(r => r !== "") ? filteredImageRefs : d.imageRefs,
+        videos: filteredVideos,
+        videoRefs: filteredVideoRefs.some(r => r !== "") ? filteredVideoRefs : d.videoRefs,
+      };
       break;
     }
 

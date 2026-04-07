@@ -63,7 +63,7 @@ function isTextHandle(handleId: string | null | undefined): boolean {
 /**
  * Extract output data and type from a source node
  */
-function getSourceOutput(
+export function getSourceOutput(
   sourceNode: WorkflowNode,
   sourceHandle: string | null | undefined,
   edgeData?: Record<string, unknown>
@@ -220,7 +220,7 @@ export function getConnectedInputsPure(
   const passthroughCache = new Map<string, ConnectedInputs>();
 
   edges
-    .filter((edge) => edge.target === nodeId)
+    .filter((edge) => edge.target === nodeId && !edge.data?.isLoop)
     .forEach((edge) => {
       const sourceNode = nodes.find((n) => n.id === edge.source);
       if (!sourceNode) return;

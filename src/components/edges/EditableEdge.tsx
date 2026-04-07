@@ -29,6 +29,7 @@ const EDGE_COLORS: Record<string, string> = {
   text: "#2563eb", // Blue for text connections
   "3d": "#06b6d4", // Cyan for 3D connections
   easeCurve: "#f59e0b", // Amber for ease curve connections
+  loop: "#d946ef", // Magenta for loop edges
 };
 
 export function EditableEdge({
@@ -71,18 +72,23 @@ export function EditableEdge({
     return (targetNode.data as NanoBananaNodeData).status === "loading";
   });
 
-  // Determine edge color based on handle type (orange if paused)
+  // Determine edge color based on handle type (magenta for loop edges, orange if paused)
   const edgeColor = useMemo(() => {
+    if (edgeData?.isLoop) return EDGE_COLORS.loop;
     if (hasPause) return EDGE_COLORS.pause;
     // Use source handle to determine color (or target if source is not available)
     // Strip numeric suffixes (e.g., "image-0" -> "image") for lookup
     const handleType = sourceHandleId || targetHandleId || "";
     const normalizedType = handleType.replace(/-\d+$/, "");
     return EDGE_COLORS[normalizedType] || EDGE_COLORS.default;
-  }, [hasPause, sourceHandleId, targetHandleId]);
+  }, [edgeData?.isLoop, hasPause, sourceHandleId, targetHandleId]);
 
   // Reference shared gradient by color key + selection state
   const gradientId = useMemo(() => {
+    if (edgeData?.isLoop) {
+      const selectionKey = isConnectedToSelection ? "active" : "dimmed";
+      return getSharedGradientId("loop", selectionKey);
+    }
     if (hasPause) {
       const selectionKey = isConnectedToSelection ? "active" : "dimmed";
       return getSharedGradientId("pause", selectionKey);
@@ -93,10 +99,36 @@ export function EditableEdge({
     const colorKey = normalizedType in EDGE_COLORS ? normalizedType : "default";
     const selectionKey = isConnectedToSelection ? "active" : "dimmed";
     return getSharedGradientId(colorKey, selectionKey);
-  }, [hasPause, sourceHandleId, targetHandleId, isConnectedToSelection]);
+  }, [edgeData?.isLoop, hasPause, sourceHandleId, targetHandleId, isConnectedToSelection]);
 
   // Calculate the path based on edge style
   const [edgePath, labelX, labelY] = useMemo(() => {
+    // Loop edges: smooth arc that exits/enters along handle directions, bowed below nodes
+    if (edgeData?.isLoop) {
+      const dist = Math.sqrt((targetX - sourceX) ** 2 + (targetY - sourceY) ** 2);
+      const extent = Math.max(100, dist * 0.4);
+      const drop = Math.max(120, dist * 0.4);
+
+      // Direction vectors matching handle positions
+      const dir: Record<string, [number, number]> = {
+        top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0],
+      };
+      const [sdx, sdy] = dir[sourcePosition] ?? [1, 0];
+      const [tdx, tdy] = dir[targetPosition] ?? [-1, 0];
+
+      // Follow handle direction + push arc below the nodes
+      const cp1x = sourceX + sdx * extent;
+      const cp1y = sourceY + sdy * extent + drop;
+      const cp2x = targetX + tdx * extent;
+      const cp2y = targetY + tdy * extent + drop;
+
+      const path = `M${sourceX},${sourceY} C${cp1x},${cp1y} ${cp2x},${cp2y} ${targetX},${targetY}`;
+      // Label at bezier midpoint (t=0.5)
+      const lx = 0.125 * sourceX + 0.375 * cp1x + 0.375 * cp2x + 0.125 * targetX;
+      const ly = 0.125 * sourceY + 0.375 * cp1y + 0.375 * cp2y + 0.125 * targetY;
+      return [path, lx, ly] as [string, number, number];
+    }
+
     if (edgeStyle === "curved") {
       return getBezierPath({
         sourceX,
@@ -119,7 +151,7 @@ export function EditableEdge({
         offset: offsetX,
       });
     }
-  }, [edgeStyle, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, offsetX]);
+  }, [edgeStyle, edgeData?.isLoop, sourceX, sourceY, sourcePosition, targetX, targetY, targetPosition, offsetX]);
 
   // Calculate handle positions on the path segments (only for angular mode)
   const handlePositions = useMemo(() => {
@@ -263,6 +295,22 @@ export function EditableEdge({
           <rect x={-4} y={-5} width={2.5} height={10} fill={edgeColor} rx={1} />
           <rect x={1.5} y={-5} width={2.5} height={10} fill={edgeColor} rx={1} />
         </g>
+      )}
+
+      {/* Loop indicator at edge midpoint */}
+      {edgeData?.isLoop && (
+        <foreignObject
+          x={labelX - 28}
+          y={labelY - 12}
+          width={56}
+          height={24}
+          className="pointer-events-none"
+        >
+          <div className="flex items-center justify-center gap-1 px-2 py-0.5 bg-neutral-800/90 border border-fuchsia-500/60 rounded-full text-[10px] font-medium">
+            <span className="text-fuchsia-300">↻</span>
+            <span className="text-fuchsia-100">{edgeData.loopCount || 3}×</span>
+          </div>
+        </foreignObject>
       )}
 
       {/* Draggable handles on segments */}

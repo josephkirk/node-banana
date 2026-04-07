@@ -109,31 +109,29 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
           )}
         </div>
 
-        {/* Frame position toggle (only when source video connected) */}
-        {hasSourceVideo && (
-          <div className="nodrag nowheel shrink-0 flex gap-1 px-1">
-            <button
-              onClick={() => updateNodeData(id, { framePosition: "first", outputImage: null })}
-              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                nodeData.framePosition === "first"
-                  ? "bg-blue-600 text-white"
-                  : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
-              }`}
-            >
-              First
-            </button>
-            <button
-              onClick={() => updateNodeData(id, { framePosition: "last", outputImage: null })}
-              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                nodeData.framePosition === "last"
-                  ? "bg-blue-600 text-white"
-                  : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
-              }`}
-            >
-              Last
-            </button>
-          </div>
-        )}
+        {/* Frame position toggle */}
+        <div className="nodrag nowheel shrink-0 flex gap-1 px-1">
+          <button
+            onClick={() => updateNodeData(id, { framePosition: "first", outputImage: null })}
+            className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+              nodeData.framePosition === "first"
+                ? "bg-blue-600 text-white"
+                : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
+            }`}
+          >
+            First
+          </button>
+          <button
+            onClick={() => updateNodeData(id, { framePosition: "last", outputImage: null })}
+            className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+              nodeData.framePosition === "last"
+                ? "bg-blue-600 text-white"
+                : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
+            }`}
+          >
+            Last
+          </button>
+        </div>
 
         {/* Extract Frame button */}
         <div className="shrink-0 flex justify-end px-1">
