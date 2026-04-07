@@ -77,6 +77,8 @@ import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { SplitGridSettingsModal } from "./SplitGridSettingsModal";
 import { createPortal } from "react-dom";
 import { useAnnotationStore } from "@/store/annotationStore";
+import { TutorialOverlay } from "./onboarding/TutorialOverlay";
+import { useFTUXStore } from "@/store/ftuxStore";
 
 const nodeTypes: NodeTypes = {
   imageInput: ImageInputNode,
@@ -311,7 +313,7 @@ export function WorkflowCanvas() {
   const clearWorkflow = useWorkflowStore((state) => state.clearWorkflow);
   const setHoveredNodeId = useWorkflowStore((state) => state.setHoveredNodeId);
   const openAnnotationModal = useAnnotationStore((state) => state.openModal);
-  const { screenToFlowPosition, getViewport, zoomIn, zoomOut, setViewport, setCenter } = useReactFlow();
+  const { screenToFlowPosition, getViewport, zoomIn, zoomOut, setViewport, setCenter, fitView } = useReactFlow();
   const { show: showToast } = useToast();
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropType, setDropType] = useState<"image" | "audio" | "workflow" | "node" | null>(null);
@@ -322,6 +324,26 @@ export function WorkflowCanvas() {
   const [showNewProjectSetup, setShowNewProjectSetup] = useState(false);
   const [expandingNode, setExpandingNode] = useState<{ id: string; type: string } | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const tutorialViewportSet = useRef(false);
+
+  // FTUX tutorial state (client-side only to avoid SSR hydration issues)
+  const [tutorialActive, setTutorialActive] = useState(false);
+  const [lockedFeatures, setLockedFeatures] = useState(false);
+
+  useEffect(() => {
+    // Subscribe to FTUX store on client-side only
+    const unsubscribe = useFTUXStore.subscribe((state) => {
+      setTutorialActive(state.tutorialActive);
+      setLockedFeatures(state.lockedFeatures);
+    });
+
+    // Initialize with current state
+    const currentState = useFTUXStore.getState();
+    setTutorialActive(currentState.tutorialActive);
+    setLockedFeatures(currentState.lockedFeatures);
+
+    return unsubscribe;
+  }, []);
 
   // Detect if canvas is empty for showing quickstart
   const isCanvasEmpty = nodes.length === 0;
@@ -344,6 +366,53 @@ export function WorkflowCanvas() {
       setNavigationTarget(null);
     }
   }, [navigationTarget, nodes, setCenter, setNavigationTarget]);
+
+  // Set default viewport when tutorial starts and first node is added
+  useEffect(() => {
+    if (tutorialActive && nodes.length > 0 && !tutorialViewportSet.current) {
+      tutorialViewportSet.current = true;
+      // Use setTimeout to ensure React Flow and node content are fully initialized
+      // Longer delay needed when nodes have pre-loaded image data
+      const timeoutId = setTimeout(() => {
+        // Center on the first node at zoom 0.7
+        const currentNodes = useWorkflowStore.getState().nodes;
+        const firstNode = currentNodes[0];
+        if (firstNode) {
+          const nodeWidth = (firstNode.style?.width as number) || 300;
+          const nodeHeight = (firstNode.style?.height as number) || 280;
+          const centerX = firstNode.position.x + nodeWidth / 2;
+          const centerY = firstNode.position.y + nodeHeight / 2;
+          // Use setCenter with explicit zoom to ensure 0.7 zoom level
+          setCenter(centerX, centerY, { duration: 500, zoom: 0.7 });
+        }
+      }, 600);
+
+      return () => clearTimeout(timeoutId);
+    }
+    // Reset the ref when tutorial ends
+    if (!tutorialActive) {
+      tutorialViewportSet.current = false;
+    }
+  }, [tutorialActive, nodes.length, setCenter]);
+
+  // Zoom out when demonstration step starts to show full workflow tree
+  useEffect(() => {
+    if (!tutorialActive) return;
+
+    const ftuxState = useFTUXStore.getState();
+    const currentStep = ftuxState.tutorialSteps[ftuxState.currentTutorialStep];
+
+    if (currentStep?.id === "demonstrate-downstream" && nodes.length > 0) {
+      // Zoom out immediately (not after delay) so users can see nodes being added
+      const generateNode = nodes.find((n) => n.type === "nanoBanana");
+      if (generateNode) {
+        // Center on the middle of the workflow tree with generous zoom
+        const centerX = generateNode.position.x + 700; // Center of the new wider layout
+        const centerY = generateNode.position.y;
+        setCenter(centerX, centerY, { duration: 800, zoom: 0.35 }); // Zoom to 0.35 for better overview
+      }
+    }
+  }, [tutorialActive, nodes, setCenter]);
 
   // Apply dimming className to nodes downstream of disabled Switch outputs or skipped by optional inputs
   const allNodes = useMemo(() => {
@@ -913,8 +982,13 @@ export function WorkflowCanvas() {
         sourceNodeId: connectionState.fromNode.id,
         sourceHandleId: fromHandleId,
       });
+
+      // Tutorial tracking
+      if (tutorialActive) {
+        useFTUXStore.getState().setConnectionMenuShown(true);
+      }
     },
-    [screenToFlowPosition, nodes, edges, handleConnect]
+    [screenToFlowPosition, nodes, edges, handleConnect, tutorialActive]
   );
 
   // Handle the splitGrid action - uses automated grid detection
@@ -1103,8 +1177,13 @@ export function WorkflowCanvas() {
       // Regular node creation
       const nodeType = selection.type as NodeType;
 
-      // Create the new node at the drop position
+      // Create the new node at the drop position (empty - tutorial will populate after connection)
       const newNodeId = addNode(nodeType, flowPosition);
+
+      // Tutorial tracking
+      if (tutorialActive && nodeType === "nanoBanana") {
+        useFTUXStore.getState().setNanoBananaAddedFromMenu(true);
+      }
 
       // If creating an annotation node from an image source, populate it with the source image
       if (nodeType === "annotation" && connectionType === "source" && handleType === "image" && sourceNodeId) {
@@ -1307,7 +1386,7 @@ export function WorkflowCanvas() {
 
       setConnectionDrop(null);
     },
-    [connectionDrop, addNode, onConnect, nodes, handleSplitGridAction, getImageFromNode, updateNodeData]
+    [connectionDrop, addNode, onConnect, nodes, handleSplitGridAction, getImageFromNode, updateNodeData, tutorialActive]
   );
 
   const handleCloseDropMenu = useCallback(() => {
@@ -2028,7 +2107,9 @@ export function WorkflowCanvas() {
             : "Shift"
         }
         panOnDrag={
-          isModalOpen
+          tutorialActive
+            ? false
+            : isModalOpen
             ? false
             : canvasNavigationSettings.panMode === "always"
             ? true
@@ -2039,13 +2120,15 @@ export function WorkflowCanvas() {
         selectNodesOnDrag={false}
         nodeDragThreshold={5}
         nodeClickDistance={5}
-        zoomOnScroll={false}
-        zoomOnPinch={!isModalOpen}
+        zoomOnScroll={tutorialActive ? false : false}
+        zoomOnPinch={tutorialActive ? false : !isModalOpen}
         minZoom={0.1}
         maxZoom={4}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         panActivationKeyCode={
-          isModalOpen
+          tutorialActive
+            ? null
+            : isModalOpen
             ? null
             : canvasNavigationSettings.panMode === "space"
             ? "Space"
@@ -2064,10 +2147,15 @@ export function WorkflowCanvas() {
         <SharedEdgeGradients />
         <GroupBackgroundsPortal />
         <GroupControlsOverlay />
-        <Background color="#404040" gap={20} size={1} />
-        <Controls className="bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg [&>button]:bg-neutral-800 [&>button]:border-neutral-700 [&>button]:fill-neutral-300 [&>button:hover]:bg-neutral-700 [&>button:hover]:fill-neutral-100" />
+        <Background
+          color="#404040"
+          gap={20}
+          size={1}
+          className={tutorialActive && lockedFeatures ? "opacity-30 pointer-events-none" : ""}
+        />
+        <Controls className={`bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg [&>button]:bg-neutral-800 [&>button]:border-neutral-700 [&>button]:fill-neutral-300 [&>button:hover]:bg-neutral-700 [&>button:hover]:fill-neutral-100 ${tutorialActive && lockedFeatures ? "opacity-30 pointer-events-none" : ""}`} />
         <MiniMap
-          className="bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg"
+          className={`bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg ${tutorialActive && lockedFeatures ? "opacity-30 pointer-events-none" : ""}`}
           maskColor="rgba(0, 0, 0, 0.6)"
           pannable
           zoomable
@@ -2317,6 +2405,9 @@ export function WorkflowCanvas() {
 
       {/* AnnotationModal is globally managed by annotationStore */}
       <AnnotationModal />
+
+      {/* Tutorial overlay */}
+      <TutorialOverlay />
     </div>
   );
 }
