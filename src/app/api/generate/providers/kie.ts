@@ -432,7 +432,7 @@ export async function generateWithKie(
           // Single data URL - upload it
           const url = await uploadImageToKie(requestId, apiKey, value);
           // Singular keys get a string, plural keys get an array
-          if (key === "image_url" || key === "video_url" || key === "tail_image_url") {
+          if (key === "image_url" || key === "video_url" || key === "tail_image_url" || key === "first_frame_url" || key === "last_frame_url" || key === "first_clip_url") {
             inputParams[key] = url;
           } else {
             inputParams[key] = [url];
@@ -453,7 +453,7 @@ export async function generateWithKie(
           }
           if (processedArray.length > 0) {
             // Singular keys get first element, plural keys get full array
-            if (key === "image_url" || key === "video_url" || key === "tail_image_url") {
+            if (key === "image_url" || key === "video_url" || key === "tail_image_url" || key === "first_frame_url" || key === "last_frame_url" || key === "first_clip_url") {
               inputParams[key] = processedArray[0];
             } else {
               inputParams[key] = processedArray;
@@ -483,7 +483,7 @@ export async function generateWithKie(
     }
 
     // Some models use singular string, others use arrays
-    if (imageKey === "image_url" || imageKey === "video_url") {
+    if (imageKey === "image_url" || imageKey === "video_url" || imageKey === "first_frame_url" || imageKey === "last_frame_url" || imageKey === "first_clip_url") {
       inputParams[imageKey] = imageUrls[0];
     } else {
       inputParams[imageKey] = imageUrls;
