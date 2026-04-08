@@ -262,10 +262,10 @@ export function getKieImageInputKey(modelId: string): string {
 
 
 /**
- * Detect actual image type from binary data (magic bytes)
+ * Detect media type from binary data (magic bytes), with fallback to declared MIME type
  */
-export function detectImageType(buffer: Buffer): { mimeType: string; ext: string } {
-  // Check magic bytes
+export function detectMediaType(buffer: Buffer, declaredMimeType?: string): { mimeType: string; ext: string } {
+  // Check image magic bytes
   if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
     return { mimeType: "image/png", ext: "png" };
   }
@@ -279,51 +279,72 @@ export function detectImageType(buffer: Buffer): { mimeType: string; ext: string
   if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) {
     return { mimeType: "image/gif", ext: "gif" };
   }
+  // Check video magic bytes (MP4: "ftyp" at offset 4)
+  if (buffer.length > 7 && buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
+    return { mimeType: "video/mp4", ext: "mp4" };
+  }
+  // Check WebM magic bytes (starts with 0x1A 0x45 0xDF 0xA3 - EBML header)
+  if (buffer[0] === 0x1A && buffer[1] === 0x45 && buffer[2] === 0xDF && buffer[3] === 0xA3) {
+    return { mimeType: "video/webm", ext: "webm" };
+  }
+
+  // Fall back to declared MIME type if magic bytes didn't match
+  if (declaredMimeType && declaredMimeType !== "image/png") {
+    const extMap: Record<string, string> = {
+      "video/mp4": "mp4", "video/webm": "webm", "video/quicktime": "mov",
+      "audio/mpeg": "mp3", "audio/wav": "wav", "audio/ogg": "ogg",
+      "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif",
+    };
+    const ext = extMap[declaredMimeType] || declaredMimeType.split("/")[1] || "bin";
+    return { mimeType: declaredMimeType, ext };
+  }
+
   // Default to PNG
   return { mimeType: "image/png", ext: "png" };
 }
 
 /**
- * Upload a base64 image to Kie.ai and get a URL
- * Required for image-to-image models since Kie doesn't accept base64 directly
+ * Upload a base64 media file (image, video, or audio) to Kie.ai and get a URL
+ * Required because Kie doesn't accept base64 directly — needs hosted URLs
  * Uses base64 upload endpoint (same as official Kie client)
  */
-export async function uploadImageToKie(
+export async function uploadMediaToKie(
   requestId: string,
   apiKey: string,
-  base64Image: string
+  base64Media: string
 ): Promise<string> {
   // Extract mime type and data from data URL
   let declaredMimeType = "image/png";
-  let imageData = base64Image;
+  let mediaData = base64Media;
 
-  if (base64Image.startsWith("data:")) {
-    const matches = base64Image.match(/^data:([^;]+);base64,(.+)$/);
+  if (base64Media.startsWith("data:")) {
+    const matches = base64Media.match(/^data:([^;]+);base64,(.+)$/);
     if (matches) {
       declaredMimeType = matches[1];
-      imageData = matches[2];
+      mediaData = matches[2];
     }
   }
 
   // Convert base64 to binary to detect actual type
-  const binaryData = Buffer.from(imageData, "base64");
+  const binaryData = Buffer.from(mediaData, "base64");
 
   if (binaryData.length > MAX_UPLOAD_SIZE) {
-    throw new Error(`[API:${requestId}] Image too large to upload (${(binaryData.length / (1024 * 1024)).toFixed(1)}MB, max ${MAX_UPLOAD_SIZE / (1024 * 1024)}MB)`);
+    throw new Error(`[API:${requestId}] File too large to upload (${(binaryData.length / (1024 * 1024)).toFixed(1)}MB, max ${MAX_UPLOAD_SIZE / (1024 * 1024)}MB)`);
   }
 
-  // Detect actual image type from magic bytes (don't trust the declared MIME type)
-  const detected = detectImageType(binaryData);
+  // Detect actual media type from magic bytes, falling back to declared MIME type
+  const detected = detectMediaType(binaryData, declaredMimeType);
   const mimeType = detected.mimeType;
   const ext = detected.ext;
 
   const filename = `upload_${Date.now()}.${ext}`;
+  const uploadPath = mimeType.startsWith("video/") ? "videos" : mimeType.startsWith("audio/") ? "audio" : "images";
 
-  console.log(`[API:${requestId}] Uploading image to Kie.ai: ${filename} (${(binaryData.length / 1024).toFixed(1)}KB) [declared: ${declaredMimeType}, actual: ${mimeType}]`);
+  console.log(`[API:${requestId}] Uploading media to Kie.ai: ${filename} (${(binaryData.length / 1024).toFixed(1)}KB) [declared: ${declaredMimeType}, actual: ${mimeType}, path: ${uploadPath}]`);
 
   // Use base64 upload endpoint (same as official Kie client)
   // Format: data:{mime_type};base64,{data}
-  const dataUrl = `data:${mimeType};base64,${imageData}`;
+  const dataUrl = `data:${mimeType};base64,${mediaData}`;
 
   const response = await fetch("https://kieai.redpandaai.co/api/file-base64-upload", {
     method: "POST",
@@ -333,7 +354,7 @@ export async function uploadImageToKie(
     },
     body: JSON.stringify({
       base64Data: dataUrl,
-      uploadPath: "images",
+      uploadPath,
       fileName: filename,
     }),
   });
@@ -359,9 +380,12 @@ export async function uploadImageToKie(
     throw new Error(`No download URL in upload response. Response: ${JSON.stringify(result).substring(0, 200)}`);
   }
 
-  console.log(`[API:${requestId}] Image uploaded: ${downloadUrl.substring(0, 80)}...`);
+  console.log(`[API:${requestId}] Media uploaded: ${downloadUrl.substring(0, 80)}...`);
   return downloadUrl;
 }
+
+/** @deprecated Use uploadMediaToKie instead */
+export const uploadImageToKie = uploadMediaToKie;
 
 /**
  * Poll Kie.ai task status until completion
@@ -512,10 +536,10 @@ export async function generateWithKie(
   if (input.dynamicInputs) {
     for (const [key, value] of Object.entries(input.dynamicInputs)) {
       if (value !== null && value !== undefined && value !== '') {
-        // Check if this is an image input that needs uploading
-        if (typeof value === 'string' && value.startsWith('data:image')) {
+        // Check if this is a media input (image/video/audio) that needs uploading
+        if (typeof value === 'string' && value.startsWith('data:')) {
           // Single data URL - upload it
-          const url = await uploadImageToKie(requestId, apiKey, value);
+          const url = await uploadMediaToKie(requestId, apiKey, value);
           // Singular keys get a string, plural keys get an array
           if (key === "image_url" || key === "video_url" || key === "tail_image_url" || key === "first_frame_url" || key === "last_frame_url" || key === "first_clip_url") {
             inputParams[key] = url;
@@ -527,8 +551,8 @@ export async function generateWithKie(
           // Array of values - check if they're data URLs that need uploading
           const processedArray: string[] = [];
           for (const item of value) {
-            if (typeof item === 'string' && item.startsWith('data:image')) {
-              const url = await uploadImageToKie(requestId, apiKey, item);
+            if (typeof item === 'string' && item.startsWith('data:')) {
+              const url = await uploadMediaToKie(requestId, apiKey, item);
               processedArray.push(url);
             } else if (typeof item === 'string' && item.startsWith('http')) {
               processedArray.push(item);
@@ -561,8 +585,8 @@ export async function generateWithKie(
       if (image.startsWith("http")) {
         imageUrls.push(image);
       } else {
-        // Upload base64 image
-        const url = await uploadImageToKie(requestId, apiKey, image);
+        // Upload base64 media
+        const url = await uploadMediaToKie(requestId, apiKey, image);
         imageUrls.push(url);
       }
     }
