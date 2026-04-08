@@ -139,6 +139,7 @@ export function getKieModelDefaults(modelId: string): Record<string, unknown> {
       return {
         mode: "pro",
         character_orientation: "video",
+        background_source: "input_video",
       };
 
     // Kling 2.6 video models

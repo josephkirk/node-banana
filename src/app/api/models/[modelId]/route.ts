@@ -990,7 +990,7 @@ function getKieSchema(modelId: string): ExtractedSchema {
       parameters: [
         { name: "mode", type: "string", description: "Generation mode", enum: ["std", "pro"], default: "pro" },
         { name: "character_orientation", type: "string", description: "Character orientation source", enum: ["image", "video"], default: "video" },
-        { name: "background_source", type: "string", description: "Background source", enum: ["image", "video"], default: "video" },
+        { name: "background_source", type: "string", description: "Background source", enum: ["input_video", "input_image"], default: "input_video" },
       ],
       inputs: [
         { name: "prompt", type: "text", required: false, label: "Prompt" },
