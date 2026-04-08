@@ -988,7 +988,7 @@ function getKieSchema(modelId: string): ExtractedSchema {
     },
     "kling-3.0/motion-control": {
       parameters: [
-        { name: "mode", type: "string", description: "Generation mode", enum: ["std", "pro"], default: "pro" },
+        { name: "mode", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
         { name: "character_orientation", type: "string", description: "Character orientation source", enum: ["image", "video"], default: "video" },
         { name: "background_source", type: "string", description: "Background source", enum: ["input_video", "input_image"], default: "input_video" },
       ],

@@ -137,7 +137,7 @@ export function getKieModelDefaults(modelId: string): Record<string, unknown> {
     // Kling 3.0 motion control
     case "kling-3.0/motion-control":
       return {
-        mode: "pro",
+        mode: "720p",
         character_orientation: "video",
         background_source: "input_video",
       };
