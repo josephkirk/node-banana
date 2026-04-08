@@ -39,6 +39,13 @@ export function getKieModelDefaults(modelId: string): Record<string, unknown> {
         quality: "basic",
       };
 
+    // Nano Banana 2 (Kie)
+    case "nano-banana-2":
+      return {
+        aspect_ratio: "auto",
+        resolution: "1K",
+      };
+
     // Nano Banana Pro (Kie)
     case "nano-banana-pro":
       return {
@@ -53,6 +60,32 @@ export function getKieModelDefaults(modelId: string): Record<string, unknown> {
     case "flux-2/flex-image-to-image":
       return {
         aspect_ratio: "1:1",
+      };
+
+    // Imagen 4 models
+    case "google/imagen4":
+    case "google/imagen4-ultra":
+      return {};
+
+    case "google/imagen4-fast":
+      return {
+        aspect_ratio: "16:9",
+        num_images: 1,
+      };
+
+    // Seedream 5.0 Lite models
+    case "seedream/5-lite-text-to-image":
+    case "seedream/5-lite-image-to-image":
+      return {
+        aspect_ratio: "1:1",
+        quality: "basic",
+      };
+
+    // Wan 2.7 Image
+    case "wan/2-7-image":
+      return {
+        resolution: "2K",
+        n: 4,
       };
 
     // Grok Imagine image models
@@ -158,11 +191,14 @@ export function getKieModelDefaults(modelId: string): Record<string, unknown> {
  */
 export function getKieImageInputKey(modelId: string): string {
   // Model-specific parameter names
+  if (modelId === "nano-banana-2") return "image_input";
   if (modelId === "nano-banana-pro") return "image_input";
   if (modelId === "seedream/4.5-edit") return "image_urls";
   if (modelId === "gpt-image/1.5-image-to-image") return "input_urls";
   // Flux-2 I2I models use input_urls
   if (modelId === "flux-2/pro-image-to-image" || modelId === "flux-2/flex-image-to-image") return "input_urls";
+  // Wan 2.7 Image uses input_urls
+  if (modelId === "wan/2-7-image") return "input_urls";
   // Kling 2.5 turbo I2V uses singular image_url
   if (modelId === "kling/v2-5-turbo-image-to-video-pro") return "image_url";
   // Kling 2.6 motion control uses input_urls

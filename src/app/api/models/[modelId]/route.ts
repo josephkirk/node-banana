@@ -748,6 +748,65 @@ function getKieSchema(modelId: string): ExtractedSchema {
         { name: "image_input", type: "image", required: false, label: "Image", isArray: true },
       ],
     },
+    "nano-banana-2": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "2:3", "3:2", "4:3", "16:9", "9:16", "21:9", "auto"], default: "auto" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["512", "1K", "2K", "4K"], default: "1K" },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: true, label: "Prompt" },
+        { name: "image_input", type: "image", required: false, label: "Image", isArray: true },
+      ],
+    },
+    "google/imagen4": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "3:4", "4:3", "9:16", "16:9"], default: "1:1" },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "google/imagen4-fast": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "3:4", "4:3", "9:16", "16:9"], default: "16:9" },
+        { name: "num_images", type: "integer", description: "Number of images to generate", default: 1, minimum: 1, maximum: 4 },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "google/imagen4-ultra": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "3:4", "4:3", "9:16", "16:9"], default: "1:1" },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "seedream/5-lite-text-to-image": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "4:3", "3:4", "16:9", "9:16", "2:3", "3:2", "21:9"], default: "1:1" },
+        { name: "quality", type: "string", description: "Output quality", enum: ["basic", "high"], default: "basic" },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "seedream/5-lite-image-to-image": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "4:3", "3:4", "16:9", "9:16", "2:3", "3:2", "21:9"], default: "1:1" },
+        { name: "quality", type: "string", description: "Output quality", enum: ["basic", "high"], default: "basic" },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: true, label: "Prompt" },
+        { name: "image_urls", type: "image", required: true, label: "Image", isArray: true },
+      ],
+    },
+    "wan/2-7-image": {
+      parameters: [
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["1K", "2K"], default: "2K" },
+        { name: "n", type: "integer", description: "Number of images to generate", default: 4, minimum: 1, maximum: 8 },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: true, label: "Prompt" },
+        { name: "input_urls", type: "image", required: false, label: "Image", isArray: true },
+      ],
+    },
     "grok-imagine/text-to-image": {
       parameters: [
         { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["2:3", "3:2", "1:1", "16:9", "9:16"], default: "1:1" },
