@@ -125,6 +125,22 @@ export function getKieModelDefaults(modelId: string): Record<string, unknown> {
         mode: "normal",
       };
 
+    // Kling 3.0 video models
+    case "kling-3.0/video/text-to-video":
+    case "kling-3.0/video/image-to-video":
+      return {
+        aspect_ratio: "16:9",
+        duration: "5",
+        mode: "pro",
+      };
+
+    // Kling 3.0 motion control
+    case "kling-3.0/motion-control":
+      return {
+        mode: "pro",
+        character_orientation: "video",
+      };
+
     // Kling 2.6 video models
     case "kling-2.6/text-to-video":
     case "kling-2.6/image-to-video":
@@ -161,6 +177,20 @@ export function getKieModelDefaults(modelId: string): Record<string, unknown> {
     case "wan/2-6-video-to-video":
       return {
         duration: "5",
+        resolution: "1080p",
+      };
+
+    // Wan 2.7 video models
+    case "wan/2-7-text-to-video":
+      return {
+        duration: 5,
+        resolution: "1080p",
+        ratio: "16:9",
+      };
+
+    case "wan/2-7-image-to-video":
+      return {
+        duration: 5,
         resolution: "1080p",
       };
 
@@ -216,8 +246,12 @@ export function getKieImageInputKey(modelId: string): string {
   if (modelId === "bytedance/seedance-2/image-to-video" || modelId === "bytedance/seedance-2-fast/image-to-video") return "first_frame_url";
   // Kling 2.5 turbo I2V uses singular image_url
   if (modelId === "kling/v2-5-turbo-image-to-video-pro") return "image_url";
+  // Kling 3.0 motion control uses input_urls
+  if (modelId === "kling-3.0/motion-control") return "input_urls";
   // Kling 2.6 motion control uses input_urls
   if (modelId === "kling-2.6/motion-control") return "input_urls";
+  // Wan 2.7 I2V uses first_frame_url (singular)
+  if (modelId === "wan/2-7-image-to-video") return "first_frame_url";
   // Topaz video upscale uses video_url (singular)
   if (modelId === "topaz/video-upscale") return "video_url";
   // Veo 3 models use imageUrls
