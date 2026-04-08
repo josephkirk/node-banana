@@ -97,6 +97,19 @@ export function getKieModelDefaults(modelId: string): Record<string, unknown> {
     case "grok-imagine/image-to-image":
       return {};
 
+    // Seedance 2.0 models
+    case "bytedance/seedance-2/text-to-video":
+    case "bytedance/seedance-2/image-to-video":
+    case "bytedance/seedance-2-fast/text-to-video":
+    case "bytedance/seedance-2-fast/image-to-video":
+      return {
+        aspect_ratio: "16:9",
+        resolution: "720p",
+        duration: 8,
+        generate_audio: true,
+        web_search: false,
+      };
+
     // Grok Imagine video models
     case "grok-imagine/text-to-video":
       return {
@@ -199,6 +212,8 @@ export function getKieImageInputKey(modelId: string): string {
   if (modelId === "flux-2/pro-image-to-image" || modelId === "flux-2/flex-image-to-image") return "input_urls";
   // Wan 2.7 Image uses input_urls
   if (modelId === "wan/2-7-image") return "input_urls";
+  // Seedance I2V models use first_frame_url (singular)
+  if (modelId === "bytedance/seedance-2/image-to-video" || modelId === "bytedance/seedance-2-fast/image-to-video") return "first_frame_url";
   // Kling 2.5 turbo I2V uses singular image_url
   if (modelId === "kling/v2-5-turbo-image-to-video-pro") return "image_url";
   // Kling 2.6 motion control uses input_urls

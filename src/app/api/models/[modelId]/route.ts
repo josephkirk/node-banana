@@ -858,6 +858,56 @@ function getKieSchema(modelId: string): ExtractedSchema {
       inputs: [{ name: "prompt", type: "text", required: true, label: "Sound Description" }],
     },
     // ============ Video models ============
+    "bytedance/seedance-2/text-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (4-15)", default: 8, minimum: 4, maximum: 15 },
+        { name: "generate_audio", type: "boolean", description: "Generate audio with the video", default: true },
+        { name: "web_search", type: "boolean", description: "Enable web search for prompt enhancement", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "bytedance/seedance-2/image-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (4-15)", default: 8, minimum: 4, maximum: 15 },
+        { name: "generate_audio", type: "boolean", description: "Generate audio with the video", default: true },
+        { name: "web_search", type: "boolean", description: "Enable web search for prompt enhancement", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: false, label: "Prompt" },
+        { name: "first_frame_url", type: "image", required: true, label: "Image" },
+      ],
+    },
+    "bytedance/seedance-2-fast/text-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (4-15)", default: 8, minimum: 4, maximum: 15 },
+        { name: "generate_audio", type: "boolean", description: "Generate audio with the video", default: true },
+        { name: "web_search", type: "boolean", description: "Enable web search for prompt enhancement", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "bytedance/seedance-2-fast/image-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (4-15)", default: 8, minimum: 4, maximum: 15 },
+        { name: "generate_audio", type: "boolean", description: "Generate audio with the video", default: true },
+        { name: "web_search", type: "boolean", description: "Enable web search for prompt enhancement", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: false, label: "Prompt" },
+        { name: "first_frame_url", type: "image", required: true, label: "Image" },
+      ],
+    },
     "grok-imagine/text-to-video": {
       parameters: [
         { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["2:3", "3:2", "1:1", "16:9", "9:16"], default: "2:3" },
