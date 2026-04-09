@@ -668,6 +668,14 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
               className="w-full h-full object-cover"
               playsInline
             />
+            {nodeData.__usedFallback && (
+              <div
+                className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 text-[9px] font-medium pointer-events-auto z-10"
+                title={`Primary failed: ${nodeData.__primaryError ?? "unknown"}\nUsed fallback: ${nodeData.__fallbackModelUsed ?? ""}`}
+              >
+                Fallback used
+              </div>
+            )}
             {/* Loading overlay for generation */}
             {nodeData.status === "loading" && (
               <div className="absolute inset-0 bg-neutral-900/70 flex items-center justify-center">

@@ -259,6 +259,14 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
           </div>
         ) : nodeData.outputText ? (
           <div className="group/text relative w-full h-full bg-neutral-900/40 p-2 overflow-auto nowheel">
+            {nodeData.__usedFallback && (
+              <div
+                className="mb-1 inline-block px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 text-[9px] font-medium"
+                title={`Primary failed: ${nodeData.__primaryError ?? "unknown"}\nUsed fallback: ${nodeData.__fallbackModelUsed ?? ""}`}
+              >
+                Fallback used
+              </div>
+            )}
             <p className="text-[10px] text-neutral-300 whitespace-pre-wrap break-words">
               {nodeData.outputText}
             </p>

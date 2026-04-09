@@ -297,6 +297,14 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
         {/* Output audio player */}
         {nodeData.outputAudio && (
           <div className="relative group mt-2">
+            {nodeData.__usedFallback && (
+              <div
+                className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 text-[9px] font-medium pointer-events-auto z-10"
+                title={`Primary failed: ${nodeData.__primaryError ?? "unknown"}\nUsed fallback: ${nodeData.__fallbackModelUsed ?? ""}`}
+              >
+                Fallback used
+              </div>
+            )}
             {/* Waveform visualization */}
             {isLoadingWaveform ? (
               <div className="flex items-center justify-center bg-neutral-900/50 rounded h-16">
