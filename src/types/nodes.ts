@@ -195,6 +195,7 @@ export interface NanoBananaNodeData extends BaseNodeData {
   useGoogleSearch: boolean; // Only available for Nano Banana Pro and Nano Banana 2
   useImageSearch: boolean; // Only available for Nano Banana 2
   parameters?: Record<string, unknown>; // Model-specific parameters for external providers
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model
   inputSchema?: ModelInputDef[]; // Model's input schema for dynamic handles
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
@@ -219,6 +220,7 @@ export interface GenerateVideoNodeData extends BaseNodeData {
   outputVideoRef?: string; // External video reference for storage optimization
   selectedModel?: SelectedModel; // Required for video generation (no legacy fallback)
   parameters?: Record<string, unknown>; // Model-specific parameters
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model
   inputSchema?: ModelInputDef[]; // Model's input schema for dynamic handles
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
@@ -244,6 +246,7 @@ export interface Generate3DNodeData extends BaseNodeData {
   savedFilePath: string | null;
   selectedModel?: SelectedModel;
   parameters?: Record<string, unknown>;
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model
   inputSchema?: ModelInputDef[];
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
@@ -274,6 +277,7 @@ export interface GenerateAudioNodeData extends BaseNodeData {
   outputAudioRef?: string; // External audio reference for storage optimization
   selectedModel?: SelectedModel; // Required for audio generation
   parameters?: Record<string, unknown>; // Model-specific parameters (voice, speed, etc.)
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model
   inputSchema?: ModelInputDef[]; // Model's input schema for dynamic handles
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
