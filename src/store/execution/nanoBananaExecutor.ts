@@ -91,7 +91,7 @@ export async function executeNanoBanana(
 
   // Inner runOnce: performs the actual fetch/process/history work for a given model.
   // Extracted so runWithFallback can invoke it twice (primary, then fallback) if needed.
-  const runOnce = async (modelToUse: SelectedModel): Promise<void> => {
+  const runOnce = async (modelToUse: SelectedModel, parametersOverride?: Record<string, unknown>): Promise<void> => {
     const provider = modelToUse.provider;
     const headers = buildGenerateHeaders(provider, providerSettings);
 
@@ -110,7 +110,7 @@ export async function executeNanoBanana(
       useGoogleSearch: nodeData.useGoogleSearch,
       useImageSearch: nodeData.useImageSearch,
       selectedModel: modelToUse,
-      parameters: nodeData.parameters,
+      parameters: parametersOverride ?? nodeData.parameters,
       dynamicInputs: sanitizedDynamicInputs,
     };
 
@@ -274,7 +274,9 @@ export async function executeNanoBanana(
     nodeId: node.id,
     primary: primaryModel,
     fallback: nodeData.fallbackModel,
+    fallbackParameters: nodeData.fallbackParameters,
     updateNodeData,
     runOnce,
+    clearOutput: { outputImage: null },
   });
 }

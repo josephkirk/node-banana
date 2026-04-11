@@ -79,7 +79,7 @@ export async function executeGenerateAudio(
     error: null,
   });
 
-  const runOnce = async (modelToUse: SelectedModel): Promise<void> => {
+  const runOnce = async (modelToUse: SelectedModel, parametersOverride?: Record<string, unknown>): Promise<void> => {
     const provider = modelToUse.provider;
     const headers = buildGenerateHeaders(provider, providerSettings);
 
@@ -87,7 +87,7 @@ export async function executeGenerateAudio(
       images: [],
       prompt: text,
       selectedModel: modelToUse,
-      parameters: nodeData.parameters,
+      parameters: parametersOverride ?? nodeData.parameters,
       dynamicInputs,
       mediaType: "audio" as const,
     };
@@ -219,7 +219,9 @@ export async function executeGenerateAudio(
     nodeId: node.id,
     primary: nodeData.selectedModel,
     fallback: nodeData.fallbackModel,
+    fallbackParameters: nodeData.fallbackParameters,
     updateNodeData,
     runOnce,
+    clearOutput: { outputAudio: null },
   });
 }

@@ -85,7 +85,7 @@ export async function executeGenerateVideo(
     error: null,
   });
 
-  const runOnce = async (modelToUse: SelectedModel): Promise<void> => {
+  const runOnce = async (modelToUse: SelectedModel, parametersOverride?: Record<string, unknown>): Promise<void> => {
     const provider = modelToUse.provider;
     const headers = buildGenerateHeaders(provider, providerSettings);
 
@@ -93,7 +93,7 @@ export async function executeGenerateVideo(
       images,
       prompt: text,
       selectedModel: modelToUse,
-      parameters: nodeData.parameters,
+      parameters: parametersOverride ?? nodeData.parameters,
       dynamicInputs,
       mediaType: "video" as const,
     };
@@ -224,7 +224,9 @@ export async function executeGenerateVideo(
     nodeId: node.id,
     primary: nodeData.selectedModel,
     fallback: nodeData.fallbackModel,
+    fallbackParameters: nodeData.fallbackParameters,
     updateNodeData,
     runOnce,
+    clearOutput: { outputVideo: null },
   });
 }
