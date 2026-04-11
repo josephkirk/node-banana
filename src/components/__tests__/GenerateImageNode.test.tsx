@@ -568,6 +568,78 @@ describe("GenerateImageNode", () => {
     });
   });
 
+  describe("Fallback Settings Tab", () => {
+    beforeEach(() => {
+      // Enable inline parameters for tab bar tests
+      localStorage.setItem("node-banana-inline-parameters", "true");
+    });
+    afterEach(() => {
+      localStorage.removeItem("node-banana-inline-parameters");
+    });
+
+    it("shows tab bar when fallbackModel is set", () => {
+      render(
+        <TestWrapper>
+          <GenerateImageNode {...createNodeProps({
+            selectedModel: { provider: "fal", modelId: "flux/dev", displayName: "FLUX Dev" },
+            fallbackModel: { provider: "replicate", modelId: "flux-schnell", displayName: "FLUX Schnell" },
+            parametersExpanded: true,
+          })} />
+        </TestWrapper>
+      );
+
+      expect(screen.getByText("FLUX Dev")).toBeInTheDocument();
+      expect(screen.getByText("FLUX Schnell")).toBeInTheDocument();
+    });
+
+    it("hides tab bar when no fallbackModel", () => {
+      render(
+        <TestWrapper>
+          <GenerateImageNode {...createNodeProps({
+            selectedModel: { provider: "fal", modelId: "flux/dev", displayName: "FLUX Dev" },
+            parametersExpanded: true,
+          })} />
+        </TestWrapper>
+      );
+
+      // Should not find the fallback label
+      expect(screen.queryByText("FLUX Schnell")).not.toBeInTheDocument();
+    });
+
+    it("switches to fallback ModelParameters when fallback tab clicked", async () => {
+      // Track which modelId is being fetched for schema
+      const schemaFetchCalls: string[] = [];
+      mockFetch.mockImplementation((url: string) => {
+        if (typeof url === "string" && url.includes("/api/models/")) {
+          schemaFetchCalls.push(url);
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ parameters: [], inputs: [], success: true }),
+        });
+      });
+
+      render(
+        <TestWrapper>
+          <GenerateImageNode {...createNodeProps({
+            selectedModel: { provider: "fal", modelId: "flux/dev", displayName: "FLUX Dev" },
+            fallbackModel: { provider: "replicate", modelId: "flux-schnell", displayName: "FLUX Schnell" },
+            parametersExpanded: true,
+          })} />
+        </TestWrapper>
+      );
+
+      // Click the fallback tab
+      fireEvent.click(screen.getByText("FLUX Schnell"));
+
+      // After clicking fallback tab, ModelParameters should fetch schema for fallback model
+      await waitFor(() => {
+        const fallbackFetches = schemaFetchCalls.filter(url => url.includes("flux-schnell"));
+        expect(fallbackFetches.length).toBeGreaterThan(0);
+      });
+    });
+  });
+
   describe("Fetch Models on Provider Change", () => {
     it("should fetch models when provider is fal", async () => {
       render(

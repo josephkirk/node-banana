@@ -16,6 +16,7 @@ import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
+import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 
 // Video generation capabilities
@@ -54,6 +55,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
   const [modelsFetchError, setModelsFetchError] = useState<string | null>(null);
   const [isBrowseDialogOpen, setIsBrowseDialogOpen] = useState(false);
   const [isLoadingCarouselVideo, setIsLoadingCarouselVideo] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"primary" | "fallback">("primary");
   const videoBlobUrl = useVideoBlobUrl(nodeData.outputVideo ?? null);
   const videoAutoplayRef = useVideoAutoplay(id, selected);
 
@@ -395,14 +397,34 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
           onToggle={handleToggleParams}
           nodeId={id}
         >
-          {/* External provider parameters - reuse ModelParameters component */}
-          {nodeData.selectedModel?.modelId && (
+          {/* Tab bar for primary/fallback settings */}
+          {nodeData.fallbackModel && (
+            <SettingsTabBar
+              activeTab={settingsTab}
+              onTabChange={setSettingsTab}
+              primaryLabel={nodeData.selectedModel?.displayName || "Primary"}
+              fallbackLabel={nodeData.fallbackModel.displayName}
+            />
+          )}
+
+          {/* Primary tab: external provider parameters */}
+          {settingsTab === "primary" && nodeData.selectedModel?.modelId && (
             <ModelParameters
               modelId={nodeData.selectedModel.modelId}
               provider={currentProvider}
               parameters={nodeData.parameters || {}}
               onParametersChange={handleParametersChange}
               onInputsLoaded={handleInputsLoaded}
+            />
+          )}
+
+          {/* Fallback tab: fallback model parameters */}
+          {settingsTab === "fallback" && nodeData.fallbackModel && (
+            <ModelParameters
+              modelId={nodeData.fallbackModel.modelId}
+              provider={nodeData.fallbackModel.provider}
+              parameters={nodeData.fallbackParameters || {}}
+              onParametersChange={(p) => updateNodeData(id, { fallbackParameters: p })}
             />
           )}
         </InlineParameterPanel>

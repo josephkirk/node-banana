@@ -13,6 +13,7 @@ import { useAudioVisualization } from "@/hooks/useAudioVisualization";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
+import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 
 type GenerateAudioNodeType = Node<GenerateAudioNodeData, "generateAudio">;
@@ -23,6 +24,7 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
   const generationsPath = useWorkflowStore((state) => state.generationsPath);
   const [isBrowseDialogOpen, setIsBrowseDialogOpen] = useState(false);
   const [isLoadingCarouselAudio, setIsLoadingCarouselAudio] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"primary" | "fallback">("primary");
 
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
@@ -251,32 +253,57 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
             onToggle={handleToggleParams}
             nodeId={id}
           >
-            {/* Model selector: Browse button + current model display */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="text-[11px] text-neutral-200 truncate">
-                  {displayTitle}
-                </div>
-                <div className="text-[9px] text-neutral-500">
-                  {currentProvider}
-                </div>
-              </div>
-              <button
-                onClick={() => setIsBrowseDialogOpen(true)}
-                className="nodrag nopan shrink-0 px-2 py-1 text-[10px] bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 rounded text-neutral-300 transition-colors"
-              >
-                Browse
-              </button>
-            </div>
+            {/* Tab bar for primary/fallback settings */}
+            {nodeData.fallbackModel && (
+              <SettingsTabBar
+                activeTab={settingsTab}
+                onTabChange={setSettingsTab}
+                primaryLabel={nodeData.selectedModel?.displayName || "Primary"}
+                fallbackLabel={nodeData.fallbackModel.displayName}
+              />
+            )}
 
-            {/* External provider parameters - reuse ModelParameters component */}
-            {nodeData.selectedModel?.modelId && (
+            {/* Primary tab content */}
+            {settingsTab === "primary" && (
+              <>
+                {/* Model selector: Browse button + current model display */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] text-neutral-200 truncate">
+                      {displayTitle}
+                    </div>
+                    <div className="text-[9px] text-neutral-500">
+                      {currentProvider}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsBrowseDialogOpen(true)}
+                    className="nodrag nopan shrink-0 px-2 py-1 text-[10px] bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 rounded text-neutral-300 transition-colors"
+                  >
+                    Browse
+                  </button>
+                </div>
+
+                {/* External provider parameters */}
+                {nodeData.selectedModel?.modelId && (
+                  <ModelParameters
+                    modelId={nodeData.selectedModel.modelId}
+                    provider={currentProvider}
+                    parameters={nodeData.parameters || {}}
+                    onParametersChange={handleParametersChange}
+                    onInputsLoaded={handleInputsLoaded}
+                  />
+                )}
+              </>
+            )}
+
+            {/* Fallback tab content */}
+            {settingsTab === "fallback" && nodeData.fallbackModel && (
               <ModelParameters
-                modelId={nodeData.selectedModel.modelId}
-                provider={currentProvider}
-                parameters={nodeData.parameters || {}}
-                onParametersChange={handleParametersChange}
-                onInputsLoaded={handleInputsLoaded}
+                modelId={nodeData.fallbackModel.modelId}
+                provider={nodeData.fallbackModel.provider}
+                parameters={nodeData.fallbackParameters || {}}
+                onParametersChange={(p) => updateNodeData(id, { fallbackParameters: p })}
               />
             )}
           </InlineParameterPanel>
