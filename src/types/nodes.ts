@@ -305,6 +305,7 @@ export interface LLMGenerateNodeData extends BaseNodeData {
   model: LLMModelType;
   temperature: number;
   maxTokens: number;
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model (temperature, maxTokens)
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
   status: NodeStatus;

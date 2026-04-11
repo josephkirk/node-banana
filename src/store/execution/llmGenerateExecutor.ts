@@ -77,10 +77,13 @@ export async function executeLlmGenerate(
     error: null,
   });
 
-  const runOnce = async (modelToUse: SelectedModel): Promise<void> => {
+  const runOnce = async (modelToUse: SelectedModel, parametersOverride?: Record<string, unknown>): Promise<void> => {
     const llmProvider = providerTypeToLlmProvider(modelToUse.provider);
     const llmModel = modelToUse.modelId as LLMModelType;
     const headers = buildLlmHeaders(llmProvider, providerSettings);
+
+    const temperature = (parametersOverride?.temperature as number | undefined) ?? nodeData.temperature;
+    const maxTokens = (parametersOverride?.maxTokens as number | undefined) ?? nodeData.maxTokens;
 
     try {
       const response = await fetch("/api/llm", {
@@ -91,8 +94,8 @@ export async function executeLlmGenerate(
           ...(images.length > 0 && { images }),
           provider: llmProvider,
           model: llmModel,
-          temperature: nodeData.temperature,
-          maxTokens: nodeData.maxTokens,
+          temperature,
+          maxTokens,
         }),
         ...(signal ? { signal } : {}),
       });
@@ -165,7 +168,9 @@ export async function executeLlmGenerate(
     nodeId: node.id,
     primary: primaryModel,
     fallback: nodeData.fallbackModel,
+    fallbackParameters: nodeData.fallbackParameters,
     updateNodeData,
     runOnce,
+    clearOutput: { outputText: null },
   });
 }
