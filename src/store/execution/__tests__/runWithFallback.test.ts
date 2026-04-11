@@ -53,7 +53,7 @@ describe("runWithFallback", () => {
     });
 
     expect(runOnce).toHaveBeenCalledTimes(1);
-    expect(runOnce).toHaveBeenCalledWith(primary);
+    expect(runOnce).toHaveBeenCalledWith(primary, undefined);
     // Only the initial clear call — no metadata update after success.
     expect(updateNodeData).toHaveBeenCalledTimes(1);
   });
@@ -88,8 +88,8 @@ describe("runWithFallback", () => {
     });
 
     expect(runOnce).toHaveBeenCalledTimes(2);
-    expect(runOnce).toHaveBeenNthCalledWith(1, primary);
-    expect(runOnce).toHaveBeenNthCalledWith(2, fallback);
+    expect(runOnce).toHaveBeenNthCalledWith(1, primary, undefined);
+    expect(runOnce).toHaveBeenNthCalledWith(2, fallback, undefined);
 
     // Last call should be the metadata stamp.
     const lastCall = updateNodeData.mock.calls.at(-1)!;
@@ -149,7 +149,7 @@ describe("runWithFallback", () => {
     expect(runOnce).toHaveBeenCalledTimes(1);
   });
 
-  it("fallback AbortError: rethrows and does not stamp metadata", async () => {
+  it("fallback AbortError: rethrows without status:complete or status:error stamp", async () => {
     const runOnce = vi
       .fn()
       .mockRejectedValueOnce(new Error("primary boom"))
@@ -165,11 +165,15 @@ describe("runWithFallback", () => {
       })
     ).rejects.toMatchObject({ name: "AbortError" });
 
-    // No status:complete stamp, no status:error combined message
-    const stampCall = updateNodeData.mock.calls.find(
-      (c) => (c[1] as Record<string, unknown>).__usedFallback === true
+    // No status:complete or status:error stamp after abort
+    const completeStamp = updateNodeData.mock.calls.find(
+      (c) => (c[1] as Record<string, unknown>).status === "complete"
     );
-    expect(stampCall).toBeUndefined();
+    const errorStamp = updateNodeData.mock.calls.find(
+      (c) => (c[1] as Record<string, unknown>).status === "error"
+    );
+    expect(completeStamp).toBeUndefined();
+    expect(errorStamp).toBeUndefined();
   });
 
   it("primary === fallback (same provider+modelId): skips fallback and rethrows", async () => {
@@ -188,5 +192,61 @@ describe("runWithFallback", () => {
     ).rejects.toThrow("primary boom");
 
     expect(runOnce).toHaveBeenCalledTimes(1);
+  });
+
+  describe("fallbackParameters", () => {
+    it("primary succeeds: runOnce called without parameters override", async () => {
+      const runOnce = vi.fn().mockResolvedValueOnce(undefined);
+      await runWithFallback({
+        nodeId: "n1",
+        primary,
+        fallback,
+        fallbackParameters: { mode: "720p" },
+        updateNodeData,
+        runOnce,
+      });
+
+      expect(runOnce).toHaveBeenCalledTimes(1);
+      expect(runOnce).toHaveBeenCalledWith(primary, undefined);
+    });
+
+    it("primary fails, fallback succeeds: runOnce called with fallbackParameters", async () => {
+      const fbParams = { mode: "720p" };
+      const runOnce = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("primary boom"))
+        .mockResolvedValueOnce(undefined);
+
+      await runWithFallback({
+        nodeId: "n1",
+        primary,
+        fallback,
+        fallbackParameters: fbParams,
+        updateNodeData,
+        runOnce,
+      });
+
+      expect(runOnce).toHaveBeenCalledTimes(2);
+      expect(runOnce).toHaveBeenNthCalledWith(1, primary, undefined);
+      expect(runOnce).toHaveBeenNthCalledWith(2, fallback, fbParams);
+    });
+
+    it("primary fails, fallback succeeds, no fallbackParameters: runOnce called with undefined", async () => {
+      const runOnce = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("primary boom"))
+        .mockResolvedValueOnce(undefined);
+
+      await runWithFallback({
+        nodeId: "n1",
+        primary,
+        fallback,
+        updateNodeData,
+        runOnce,
+      });
+
+      expect(runOnce).toHaveBeenCalledTimes(2);
+      expect(runOnce).toHaveBeenNthCalledWith(2, fallback, undefined);
+    });
   });
 });

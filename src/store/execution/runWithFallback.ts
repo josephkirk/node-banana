@@ -19,8 +19,11 @@ export interface RunWithFallbackOptions {
   nodeId: string;
   primary: SelectedModel;
   fallback?: SelectedModel;
+  fallbackParameters?: Record<string, unknown>;
   updateNodeData: (id: string, data: Partial<WorkflowNodeData>) => void;
-  runOnce: (model: SelectedModel) => Promise<void>;
+  runOnce: (model: SelectedModel, parametersOverride?: Record<string, unknown>) => Promise<void>;
+  /** Data to merge when transitioning to fallback (e.g. { outputImage: null }) */
+  clearOutput?: Partial<WorkflowNodeData>;
 }
 
 function isAbortError(err: unknown): boolean {
@@ -40,7 +43,7 @@ function isSameModel(a: SelectedModel, b: SelectedModel): boolean {
 export async function runWithFallback(
   options: RunWithFallbackOptions
 ): Promise<void> {
-  const { nodeId, primary, fallback, updateNodeData, runOnce } = options;
+  const { nodeId, primary, fallback, fallbackParameters, updateNodeData, runOnce, clearOutput } = options;
 
   // Clear any prior fallback metadata before we start.
   updateNodeData(nodeId, {
@@ -51,7 +54,7 @@ export async function runWithFallback(
 
   let primaryError: unknown;
   try {
-    await runOnce(primary);
+    await runOnce(primary, undefined);
     return;
   } catch (err) {
     if (isAbortError(err)) throw err;
@@ -65,8 +68,18 @@ export async function runWithFallback(
 
   const primaryErrMsg = errorMessage(primaryError);
 
+  // Clear error state and stale output, show the fallback is now running.
+  updateNodeData(nodeId, {
+    ...clearOutput,
+    status: "running",
+    error: null,
+    __usedFallback: true,
+    __fallbackModelUsed: fallback.displayName,
+    __primaryError: primaryErrMsg,
+  });
+
   try {
-    await runOnce(fallback);
+    await runOnce(fallback, fallbackParameters);
     // Success on fallback: stamp metadata and ensure status reflects completion.
     updateNodeData(nodeId, {
       status: "complete",
