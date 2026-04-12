@@ -2145,6 +2145,12 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       workflow.edges = Array.from(edgeById.values());
     }
 
+    // Filter orphaned edges referencing non-existent nodes
+    const nodeIds = new Set(workflow.nodes.map((n) => n.id));
+    workflow.edges = workflow.edges.filter(
+      (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    );
+
     // Look up saved config from localStorage (only if workflow has an ID)
     const configs = loadSaveConfigs();
     const savedConfig = workflow.id ? configs[workflow.id] : null;
