@@ -455,7 +455,7 @@ async function externalizeNodeMedia(
 
       // Externalize gallery videos
       for (let i = 0; i < (d.videos?.length || 0); i++) {
-        const vid = d.videos[i];
+        const vid = d.videos![i];
         const existingRef = galleryVideoRefs[i];
         if (existingRef && isDataUrl(vid)) {
           // Already has ref, just keep it
@@ -1084,9 +1084,9 @@ async function hydrateNodeMedia(
       newData = {
         ...d,
         images: filteredImages,
-        imageRefs: filteredImageRefs.some(r => r !== "") ? filteredImageRefs : d.imageRefs,
+        imageRefs: filteredImageRefs,
         videos: filteredVideos,
-        videoRefs: filteredVideoRefs.some(r => r !== "") ? filteredVideoRefs : d.videoRefs,
+        videoRefs: filteredVideoRefs,
       };
       break;
     }

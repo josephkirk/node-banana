@@ -316,7 +316,7 @@ export function WorkflowCanvas() {
   const clearWorkflow = useWorkflowStore((state) => state.clearWorkflow);
   const setHoveredNodeId = useWorkflowStore((state) => state.setHoveredNodeId);
   const openAnnotationModal = useAnnotationStore((state) => state.openModal);
-  const { screenToFlowPosition, getViewport, zoomIn, zoomOut, setViewport, setCenter, fitView } = useReactFlow();
+  const { screenToFlowPosition, getViewport, zoomIn, zoomOut, setViewport, setCenter } = useReactFlow();
   const { show: showToast } = useToast();
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropType, setDropType] = useState<"image" | "audio" | "workflow" | "node" | null>(null);
@@ -2488,7 +2488,7 @@ export function WorkflowCanvas() {
           initialCapabilityFilter={fallbackDialogState.capability}
           showClearOption
           onClearSelection={() => {
-            updateNodeData(fallbackDialogState.nodeId, { fallbackModel: undefined });
+            updateNodeData(fallbackDialogState.nodeId, { fallbackModel: undefined, fallbackParameters: undefined });
             setFallbackDialogState(null);
           }}
           onModelSelected={(model) => {

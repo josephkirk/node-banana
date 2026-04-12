@@ -184,6 +184,11 @@ export async function executeGenerate3D(
     displayName: "",
   };
 
+  if (!primaryModel.modelId) {
+    updateNodeData(node.id, { status: "error", error: "No model selected" });
+    throw new Error("No model selected");
+  }
+
   await runWithFallback({
     nodeId: node.id,
     primary: primaryModel,
@@ -191,6 +196,6 @@ export async function executeGenerate3D(
     fallbackParameters: nodeData.fallbackParameters,
     updateNodeData,
     runOnce,
-    clearOutput: { outputVideo: null },
+    clearOutput: { output3dUrl: null },
   });
 }

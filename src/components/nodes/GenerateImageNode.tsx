@@ -68,6 +68,12 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
   const [isBrowseDialogOpen, setIsBrowseDialogOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"primary" | "fallback">("primary");
 
+  useEffect(() => {
+    if (!nodeData.fallbackModel && settingsTab === "fallback") {
+      setSettingsTab("primary");
+    }
+  }, [nodeData.fallbackModel, settingsTab]);
+
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
 

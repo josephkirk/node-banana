@@ -1534,9 +1534,16 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
           }
         }
 
+        // Remap startLevel to prefixLevels index (original index may not match after partitioning)
+        let prefixStartLevel = 0;
+        if (startFromNodeId) {
+          const idx = prefixLevels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
+          prefixStartLevel = idx !== -1 ? idx : 0;
+        }
+
         // Execute prefix once
         logger.info('node.execution', 'Executing prefix levels', { count: prefixLevels.length });
-        await executeLevels(prefixLevels, startLevel);
+        await executeLevels(prefixLevels, prefixStartLevel);
 
         // Execute loop N times
         const loopCount = loopEdge.data?.loopCount ?? 3;

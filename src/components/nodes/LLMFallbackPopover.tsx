@@ -88,7 +88,7 @@ export function LLMFallbackPopover({ nodeId, onClose }: LLMFallbackPopoverProps)
   };
 
   const handleRemove = () => {
-    updateNodeData(nodeId, { fallbackModel: undefined });
+    updateNodeData(nodeId, { fallbackModel: undefined, fallbackParameters: undefined });
     onClose();
   };
 
