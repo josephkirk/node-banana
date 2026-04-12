@@ -2307,22 +2307,19 @@ export function WorkflowCanvas() {
                       if (cap) setFallbackDialogState({ nodeId: node.id, capability: cap });
                     }
                   }}
-                  className={`nodrag nopan p-0.5 rounded transition-colors border ${
+                  className={`nodrag nopan p-0.5 rounded transition-colors border flex items-center ${
                     hasFallback
-                      ? "text-emerald-400 border-emerald-600/60 hover:text-emerald-300"
+                      ? "text-blue-400 border-blue-600/60 hover:text-blue-200"
                       : "text-neutral-500 border-neutral-600 hover:text-neutral-200"
                   }`}
                   title={hasFallback ? `Fallback: ${fallbackName}` : "Set fallback model (runs if primary fails)"}
                 >
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25l8.25 3v6.75c0 4.5-3.375 8.25-8.25 9.75-4.875-1.5-8.25-5.25-8.25-9.75V5.25L12 2.25z" />
-                    {hasFallback && (
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" />
-                    )}
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0 1 16 0M12 4v8M8 12Q9 7 12 4M16 12Q15 7 12 4M4 12l8 8M20 12l-8 8M11 20h2" />
                   </svg>
                 </button>
                 {hasFallback && (
-                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 ring-1 ring-neutral-900 pointer-events-none" />
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-blue-400 ring-1 ring-neutral-900 pointer-events-none" />
                 )}
               </div>
             ) : undefined;
@@ -2342,9 +2339,13 @@ export function WorkflowCanvas() {
                 customTitle={node.data?.customTitle}
                 comment={node.data?.comment}
                 provider={(node.data as any)?.selectedModel?.provider}
-                headerAction={browseAction}
+                headerAction={(browseAction || fallbackButton) ? (
+                  <>
+                    {browseAction}
+                    {fallbackButton}
+                  </>
+                ) : undefined}
                 headerButtons={optionalToggle}
-                alwaysVisibleButtons={fallbackButton}
                 onCustomTitleChange={handleCustomTitleChange}
                 onCommentChange={handleCommentChange}
                 onRunNode={handleRunNode}
@@ -2483,6 +2484,7 @@ export function WorkflowCanvas() {
         <ModelSearchDialog
           isOpen
           onClose={() => setFallbackDialogState(null)}
+          title="Select fallback model"
           initialCapabilityFilter={fallbackDialogState.capability}
           showClearOption
           onClearSelection={() => {

@@ -113,6 +113,8 @@ interface ModelSearchDialogProps {
   showClearOption?: boolean;
   /** Callback when the "Remove fallback" row is clicked */
   onClearSelection?: () => void;
+  /** Custom dialog title (defaults to "Browse Models") */
+  title?: string;
 }
 
 export function ModelSearchDialog({
@@ -123,6 +125,7 @@ export function ModelSearchDialog({
   initialCapabilityFilter,
   showClearOption,
   onClearSelection,
+  title = "Browse Models",
 }: ModelSearchDialogProps) {
   const {
     addNode,
@@ -577,7 +580,7 @@ export function ModelSearchDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-700">
           <h2 className="text-lg font-semibold text-neutral-100">
-            Browse Models
+            {title}
           </h2>
           <button
             onClick={onClose}
