@@ -8,6 +8,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { OutputGalleryNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { defaultNodeDimensions } from "@/store/utils/nodeDefaults";
+import { downloadMedia as downloadMediaUtil } from "@/utils/downloadMedia";
 
 type MediaItem = { type: "image" | "video"; src: string };
 
@@ -67,14 +68,9 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
     const item = displayMedia[lightboxIndex];
     if (!item) return;
 
-    const link = document.createElement("a");
-    link.href = item.src;
-    link.download = item.type === "video"
-      ? `gallery-video-${lightboxIndex + 1}.mp4`
-      : `gallery-image-${lightboxIndex + 1}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadMediaUtil(item.src, item.type).catch((err) =>
+      console.error("Gallery download failed:", err)
+    );
   }, [lightboxIndex, displayMedia]);
 
   const removeMedia = useCallback((index: number) => {

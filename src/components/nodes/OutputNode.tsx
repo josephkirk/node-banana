@@ -76,7 +76,11 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
   const handleDownload = useCallback(async () => {
     if (!contentSrc) return;
     const type: MediaType = isAudio ? "audio" : isVideo ? "video" : "image";
-    await downloadMedia(contentSrc, type, nodeData.outputFilename ?? undefined);
+    try {
+      await downloadMedia(contentSrc, type, nodeData.outputFilename ?? undefined);
+    } catch (err) {
+      console.error("Download failed:", err);
+    }
   }, [contentSrc, isAudio, isVideo, nodeData.outputFilename]);
 
   return (
