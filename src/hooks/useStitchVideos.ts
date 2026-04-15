@@ -295,7 +295,7 @@ export async function stitchVideosAsync(
     let outputStarted = false;
 
     if (effectiveAudioData) {
-      updateProgress('processing', 'Detecting supported audio codec...', 8);
+      updateProgress('processing', 'Detecting supported audio codec...', 11);
 
       // Detect the best supported audio codec for MP4
       // Try common codecs in order of preference: aac, mp3 (no opus - Twitter doesn't support it)

@@ -217,7 +217,8 @@ export function AudioInputNode({ id, data, selected }: NodeProps<AudioInputNodeT
           {/* Download button */}
           <button
             onClick={() => downloadMedia(nodeData.audioFile!, "audio")}
-            className="absolute top-1 right-7 w-5 h-5 bg-black/60 hover:bg-black/80 text-white rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+            aria-label="Download audio"
+            className="absolute top-1 right-7 w-5 h-5 bg-black/60 hover:bg-black/80 text-white rounded text-xs opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-white transition-opacity flex items-center justify-center"
             title="Download audio"
           >
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
