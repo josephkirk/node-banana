@@ -18,6 +18,8 @@ export function TutorialOverlay() {
   const nodesPopulated = useRef(false);
   const demonstrateNodesAdded = useRef(false);
   const demonstrateTimeoutIds = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const populateTimeoutIds = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const tutorialActive = useFTUXStore((state) => state.tutorialActive);
   const currentTutorialStep = useFTUXStore((state) => state.currentTutorialStep);
@@ -113,10 +115,19 @@ export function TutorialOverlay() {
       completeCurrentStep();
       // Advance to next step after configurable delay (default 1000ms)
       const delay = currentStep.advanceDelay !== undefined ? currentStep.advanceDelay : 1000;
-      setTimeout(() => {
+      if (advanceTimeoutRef.current) clearTimeout(advanceTimeoutRef.current);
+      advanceTimeoutRef.current = setTimeout(() => {
+        advanceTimeoutRef.current = null;
         nextTutorialStep();
       }, delay);
     }
+
+    return () => {
+      if (advanceTimeoutRef.current) {
+        clearTimeout(advanceTimeoutRef.current);
+        advanceTimeoutRef.current = null;
+      }
+    };
   }, [
     tutorialActive,
     currentTutorialStep,
@@ -162,9 +173,11 @@ export function TutorialOverlay() {
     // Check if we're on the "populate-content" step
     if (currentStep?.id === "populate-content" && !currentStep.completed) {
       nodesPopulated.current = true;
+      const timeoutIds = populateTimeoutIds.current;
+      timeoutIds.length = 0;
 
       // Wait a bit before populating to show the message first
-      setTimeout(() => {
+      timeoutIds.push(setTimeout(() => {
         // Find the image input and prompt nodes
         const imageInputNode = nodes.find((node) => node.type === "imageInput");
         const promptNode = nodes.find((node) => node.type === "prompt");
@@ -185,11 +198,16 @@ export function TutorialOverlay() {
         }
 
         // Auto-advance after populating
-        setTimeout(() => {
+        timeoutIds.push(setTimeout(() => {
           completeCurrentStep();
           nextTutorialStep();
-        }, 1500);
-      }, 1000);
+        }, 1500));
+      }, 1000));
+
+      return () => {
+        timeoutIds.forEach(clearTimeout);
+        timeoutIds.length = 0;
+      };
     }
 
     // Reset ref when tutorial ends

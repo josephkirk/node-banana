@@ -79,14 +79,22 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
 
     if (item.type === "image") {
       const images = [...(nodeData.images || [])];
+      const imageRefs = [...(nodeData.imageRefs || [])];
       const imgIndex = images.indexOf(item.src);
-      if (imgIndex !== -1) images.splice(imgIndex, 1);
-      updateNodeData(id, { images });
+      if (imgIndex !== -1) {
+        images.splice(imgIndex, 1);
+        if (imgIndex < imageRefs.length) imageRefs.splice(imgIndex, 1);
+      }
+      updateNodeData(id, { images, imageRefs });
     } else {
       const videos = [...(nodeData.videos || [])];
+      const videoRefs = [...(nodeData.videoRefs || [])];
       const vidIndex = videos.indexOf(item.src);
-      if (vidIndex !== -1) videos.splice(vidIndex, 1);
-      updateNodeData(id, { videos });
+      if (vidIndex !== -1) {
+        videos.splice(vidIndex, 1);
+        if (vidIndex < videoRefs.length) videoRefs.splice(vidIndex, 1);
+      }
+      updateNodeData(id, { videos, videoRefs });
     }
 
     // Adjust lightbox after removal
