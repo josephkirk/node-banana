@@ -66,11 +66,14 @@ describe("ModelParameters", () => {
   });
 
   describe("Initial Rendering", () => {
-    it("should not render for Gemini provider", () => {
-      const { container } = render(
+    it("should fetch schema for Gemini provider", () => {
+      (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+        () => new Promise(() => {})
+      );
+      render(
         <ModelParameters {...defaultProps} provider="gemini" />
       );
-      expect(container.firstChild).toBeNull();
+      expect(screen.getByText("Loading parameters...")).toBeInTheDocument();
     });
 
     it("should not render when modelId is empty", () => {
@@ -767,8 +770,17 @@ describe("ModelParameters", () => {
       });
     });
 
-    it("should call onInputsLoaded with empty array for Gemini", () => {
+    it("should fetch schema and call onInputsLoaded for Gemini", async () => {
       const onInputsLoaded = vi.fn();
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            parameters: [],
+            inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+          }),
+      });
 
       render(
         <ModelParameters
@@ -778,7 +790,11 @@ describe("ModelParameters", () => {
         />
       );
 
-      expect(onInputsLoaded).toHaveBeenCalledWith([]);
+      await waitFor(() => {
+        expect(onInputsLoaded).toHaveBeenCalledWith([
+          { name: "prompt", type: "text", required: true, label: "Prompt" },
+        ]);
+      });
     });
   });
 

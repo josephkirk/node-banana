@@ -31,6 +31,11 @@ interface FloatingNodeHeaderProps {
   onRunNode?: (nodeId: string) => void;
   headerAction?: ReactNode;
   headerButtons?: ReactNode;
+  /**
+   * Buttons that should remain visible regardless of hover/selected state.
+   * Rendered to the left of the hover-fade control cluster.
+   */
+  alwaysVisibleButtons?: ReactNode;
   provider?: ProviderType;
   title: string;
   customTitle?: string;
@@ -53,6 +58,7 @@ export const FloatingNodeHeader = memo(function FloatingNodeHeader({
   onRunNode,
   headerAction,
   headerButtons,
+  alwaysVisibleButtons,
   provider,
   title,
   customTitle,
@@ -349,8 +355,17 @@ export const FloatingNodeHeader = memo(function FloatingNodeHeader({
           )}
         </div>
 
+        {/* Right-aligned controls wrapper: always-visible buttons + hover-fade cluster */}
+        <div className="shrink-0 flex items-center gap-1 pr-1 -translate-y-1">
+          {/* Always-visible buttons (e.g. fallback shield) — do NOT fade with hover */}
+          {alwaysVisibleButtons && (
+            <div className="shrink-0 flex items-center gap-1">
+              {alwaysVisibleButtons}
+            </div>
+          )}
+
         {/* Controls - right-aligned, fade in on hover/selected */}
-        <div className={`shrink-0 flex items-center gap-1 pr-1 transition-opacity duration-200 -translate-y-1 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`shrink-0 flex items-center gap-1 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0'}`}>
           {/* Header Action (e.g. Browse button) */}
           {headerAction}
 
@@ -519,6 +534,7 @@ export const FloatingNodeHeader = memo(function FloatingNodeHeader({
               </button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

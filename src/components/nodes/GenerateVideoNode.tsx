@@ -16,6 +16,7 @@ import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
+import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 
 // Video generation capabilities
@@ -54,6 +55,14 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
   const [modelsFetchError, setModelsFetchError] = useState<string | null>(null);
   const [isBrowseDialogOpen, setIsBrowseDialogOpen] = useState(false);
   const [isLoadingCarouselVideo, setIsLoadingCarouselVideo] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"primary" | "fallback">("primary");
+
+  useEffect(() => {
+    if (!nodeData.fallbackModel && settingsTab === "fallback") {
+      setSettingsTab("primary");
+    }
+  }, [nodeData.fallbackModel, settingsTab]);
+
   const videoBlobUrl = useVideoBlobUrl(nodeData.outputVideo ?? null);
   const videoAutoplayRef = useVideoAutoplay(id, selected);
 
@@ -395,14 +404,34 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
           onToggle={handleToggleParams}
           nodeId={id}
         >
-          {/* External provider parameters - reuse ModelParameters component */}
-          {nodeData.selectedModel?.modelId && (
+          {/* Tab bar for primary/fallback settings */}
+          {nodeData.fallbackModel && (
+            <SettingsTabBar
+              activeTab={settingsTab}
+              onTabChange={setSettingsTab}
+              primaryLabel={nodeData.selectedModel?.displayName || "Primary"}
+              fallbackLabel={nodeData.fallbackModel.displayName}
+            />
+          )}
+
+          {/* Primary tab: external provider parameters */}
+          {settingsTab === "primary" && nodeData.selectedModel?.modelId && (
             <ModelParameters
               modelId={nodeData.selectedModel.modelId}
               provider={currentProvider}
               parameters={nodeData.parameters || {}}
               onParametersChange={handleParametersChange}
               onInputsLoaded={handleInputsLoaded}
+            />
+          )}
+
+          {/* Fallback tab: fallback model parameters */}
+          {settingsTab === "fallback" && nodeData.fallbackModel && (
+            <ModelParameters
+              modelId={nodeData.fallbackModel.modelId}
+              provider={nodeData.fallbackModel.provider}
+              parameters={nodeData.fallbackParameters || {}}
+              onParametersChange={(p) => updateNodeData(id, { fallbackParameters: p })}
             />
           )}
         </InlineParameterPanel>
@@ -668,6 +697,14 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
               className="w-full h-full object-cover"
               playsInline
             />
+            {nodeData.__usedFallback && (
+              <div
+                className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 text-[9px] font-medium pointer-events-auto z-10"
+                title={`Primary failed: ${nodeData.__primaryError ?? "unknown"}\nUsed fallback: ${nodeData.__fallbackModelUsed ?? ""}`}
+              >
+                Fallback used
+              </div>
+            )}
             {/* Loading overlay for generation */}
             {nodeData.status === "loading" && (
               <div className="absolute inset-0 bg-neutral-900/70 flex items-center justify-center">

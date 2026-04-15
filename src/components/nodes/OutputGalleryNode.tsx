@@ -82,19 +82,24 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
     if (!item) return;
 
     if (item.type === "image") {
-      const filtered = (nodeData.images || []).filter((img) => img !== item.src);
-      updateNodeData(id, { images: filtered });
+      const images = [...(nodeData.images || [])];
+      const imgIndex = images.indexOf(item.src);
+      if (imgIndex !== -1) images.splice(imgIndex, 1);
+      updateNodeData(id, { images });
     } else {
-      const filtered = (nodeData.videos || []).filter((vid) => vid !== item.src);
-      updateNodeData(id, { videos: filtered });
+      const videos = [...(nodeData.videos || [])];
+      const vidIndex = videos.indexOf(item.src);
+      if (vidIndex !== -1) videos.splice(vidIndex, 1);
+      updateNodeData(id, { videos });
     }
 
     // Adjust lightbox after removal
     if (lightboxIndex !== null) {
-      if (displayMedia.length <= 1) {
+      const newLength = displayMedia.length - 1;
+      if (newLength <= 0) {
         setLightboxIndex(null);
-      } else if (lightboxIndex >= displayMedia.length - 1) {
-        setLightboxIndex(displayMedia.length - 2);
+      } else if (lightboxIndex >= newLength) {
+        setLightboxIndex(newLength - 1);
       }
     }
   }, [displayMedia, nodeData.images, nodeData.videos, updateNodeData, id, lightboxIndex]);

@@ -457,7 +457,7 @@ export function FloatingActionBar() {
       // Normal execution
       executeWorkflow();
     }
-  }, [isRunning, stopWorkflow, executeWorkflow]);
+  }, [isRunning, stopWorkflow, executeWorkflow, mockTutorialExecution]);
 
   const handleRunFromSelected = () => {
     if (selectedNode) {
