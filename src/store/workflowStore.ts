@@ -1534,11 +1534,19 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
           }
         }
 
-        // Remap startLevel to prefixLevels index (original index may not match after partitioning)
+        // Remap startLevel to prefixLevels and loopLevels indices
         let prefixStartLevel = 0;
+        let loopStartLevel = -1;
         if (startFromNodeId) {
-          const idx = prefixLevels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
-          prefixStartLevel = idx !== -1 ? idx : 0;
+          const prefixIdx = prefixLevels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
+          const loopIdx = loopLevels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
+
+          if (prefixIdx !== -1) {
+            prefixStartLevel = prefixIdx;
+          } else if (loopIdx !== -1) {
+            // Resume target is inside loop - start from that level on first iteration
+            loopStartLevel = loopIdx;
+          }
         }
 
         // Execute prefix once
@@ -1546,7 +1554,12 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         await executeLevels(prefixLevels, prefixStartLevel);
 
         // Execute loop N times
-        const loopCount = loopEdge.data?.loopCount ?? 3;
+        // Normalize and clamp loopCount to handle malformed/imported values
+        const rawLoopCount = loopEdge.data?.loopCount ?? 3;
+        const parsed = Number(rawLoopCount);
+        const loopCount = Number.isFinite(parsed) && !isNaN(parsed)
+          ? Math.max(1, Math.min(100, parsed))
+          : 3;
         for (let i = 0; i < loopCount; i++) {
           if (abortController.signal.aborted || !get().isRunning) break;
 
@@ -1569,7 +1582,9 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
           logger.info('node.execution', `Loop iteration ${i + 1}/${loopCount}`);
 
           // Execute loop body + downstream levels with fresh node state
-          await executeLevels(loopLevels);
+          // On first iteration, use loopStartLevel if resuming from a node inside the loop
+          const startLevel = i === 0 && loopStartLevel !== -1 ? loopStartLevel : 0;
+          await executeLevels(loopLevels, startLevel);
         }
       }
 
