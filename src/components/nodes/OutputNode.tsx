@@ -9,6 +9,7 @@ import { OutputNodeData } from "@/types";
 import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
+import { downloadMedia, MediaType } from "@/utils/downloadMedia";
 
 type OutputNodeType = Node<OutputNodeData, "output">;
 
@@ -74,41 +75,8 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
 
   const handleDownload = useCallback(async () => {
     if (!contentSrc) return;
-
-    const timestamp = Date.now();
-    const extension = isAudio ? "mp3" : isVideo ? "mp4" : "png";
-    // Use custom filename if provided, otherwise use timestamp
-    const filename = nodeData.outputFilename
-      ? `${nodeData.outputFilename}.${extension}`
-      : `generated-${timestamp}.${extension}`;
-
-    // Handle URL-based content (needs fetch + blob conversion)
-    if (contentSrc.startsWith("http://") || contentSrc.startsWith("https://")) {
-      try {
-        const response = await fetch(contentSrc);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-      } catch (error) {
-        console.error("Failed to download:", error);
-      }
-      return;
-    }
-
-    // Handle data URL content (direct download)
-    const link = document.createElement("a");
-    link.href = contentSrc;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const type: MediaType = isAudio ? "audio" : isVideo ? "video" : "image";
+    await downloadMedia(contentSrc, type, nodeData.outputFilename ?? undefined);
   }, [contentSrc, isAudio, isVideo, nodeData.outputFilename]);
 
   return (

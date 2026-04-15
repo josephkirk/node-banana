@@ -17,6 +17,7 @@ import { InlineParameterPanel } from "./InlineParameterPanel";
 import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
+import { downloadMedia } from "@/utils/downloadMedia";
 
 /** Reorder items so they read column-first in a row-based CSS grid.
  *  e.g. [1,2,3,4,5,6,7,8] with 2 cols → [1,5,2,6,3,7,4,8] */
@@ -805,8 +806,17 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
                 </svg>
               </div>
             )}
-            {/* Clear button */}
-            <div className="absolute top-1 right-1">
+            {/* Download + Clear buttons */}
+            <div className="absolute top-1 right-1 flex items-center gap-0.5">
+              <button
+                onClick={() => downloadMedia(nodeData.outputImage!, "image")}
+                className="w-5 h-5 bg-neutral-900/80 hover:bg-neutral-700 rounded flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+                title="Download image"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </button>
               <button
                 onClick={handleClearImage}
                 className="w-5 h-5 bg-neutral-900/80 hover:bg-red-600/80 rounded flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
