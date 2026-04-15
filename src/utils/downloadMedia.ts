@@ -70,6 +70,10 @@ export async function downloadMedia(
   if (isHttp) {
     try {
       const response = await fetch(src);
+      if (!response.ok) {
+        console.error(`Failed to download: ${response.status} ${response.statusText}`);
+        return;
+      }
       const blob = await response.blob();
       const blobUrl = URL.createObjectURL(blob);
       triggerDownload(blobUrl, finalName);
