@@ -27,6 +27,12 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
   const [isLoadingCarouselAudio, setIsLoadingCarouselAudio] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"primary" | "fallback">("primary");
 
+  useEffect(() => {
+    if (!nodeData.fallbackModel && settingsTab === "fallback") {
+      setSettingsTab("primary");
+    }
+  }, [nodeData.fallbackModel, settingsTab]);
+
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
 
