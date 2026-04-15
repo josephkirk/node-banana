@@ -273,5 +273,7 @@ export function copyLoopOutput(
     updateNodeData(targetNode.id, { prompt: value });
   } else if (type === "audio" && targetNode.type === "audioInput") {
     updateNodeData(targetNode.id, { audioFile: value });
+  } else {
+    console.warn(`[copyLoopOutput] Unrecognized target: type="${type}" → node.type="${targetNode.type}"`);
   }
 }

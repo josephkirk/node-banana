@@ -480,12 +480,16 @@ async function externalizeNodeMedia(
       const hasImageRefs = galleryImageRefs.some(r => r && r !== "");
       const hasVideoRefs = galleryVideoRefs.some(r => r && r !== "");
 
+      // Trim refs to match actual array lengths (stale trailing entries after deletions)
+      const trimmedImageRefs = galleryImageRefs.slice(0, d.images?.length || 0);
+      const trimmedVideoRefs = galleryVideoRefs.slice(0, d.videos?.length || 0);
+
       newData = {
         ...d,
         images: cleanedImages,
-        imageRefs: hasImageRefs ? galleryImageRefs : undefined,
+        imageRefs: hasImageRefs ? trimmedImageRefs : undefined,
         videos: cleanedVideos,
-        videoRefs: hasVideoRefs ? galleryVideoRefs : undefined,
+        videoRefs: hasVideoRefs ? trimmedVideoRefs : undefined,
       };
       break;
     }
