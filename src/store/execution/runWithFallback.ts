@@ -71,7 +71,7 @@ export async function runWithFallback(
   // Clear error state and stale output, show the fallback is now running.
   updateNodeData(nodeId, {
     ...clearOutput,
-    status: "running",
+    status: "loading",
     error: null,
     __usedFallback: true,
     __fallbackModelUsed: fallback.displayName,

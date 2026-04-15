@@ -1673,6 +1673,7 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
     const mockImageUrl = "/tutorial/owl-aviator.png";
     try {
       const response = await fetch(mockImageUrl, { signal });
+      if (!response.ok) throw new Error(`Failed to fetch tutorial image: ${response.status}`);
       const blob = await response.blob();
       const reader = new FileReader();
 

@@ -2499,6 +2499,7 @@ export function WorkflowCanvas() {
                 displayName: model.name,
                 capabilities: model.capabilities,
               },
+              fallbackParameters: {},
             });
             setFallbackDialogState(null);
           }}
