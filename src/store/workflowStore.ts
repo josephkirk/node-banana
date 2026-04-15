@@ -1622,11 +1622,14 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
     const nanoBananaNode = nodes.find((n) => n.type === "nanoBanana");
     if (!nanoBananaNode) return;
 
+    const controller = new AbortController();
+    const { signal } = controller;
+
     // Set execution state
     set({
       isRunning: true,
       currentNodeIds: [nanoBananaNode.id],
-      _abortController: new AbortController(),
+      _abortController: controller,
     });
 
     // Set loading state (triggers edge animations)
@@ -1635,18 +1638,36 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       error: null,
     });
 
-    // Wait 5 seconds (realistic generation time)
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    // Cancellable 5-second delay
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, 5000);
+        signal.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
+      });
+    } catch {
+      // Aborted during wait — clean up and exit
+      updateNodeData(nanoBananaNode.id, { status: "idle", error: null });
+      set({ isRunning: false, currentNodeIds: [], _abortController: null });
+      return;
+    }
 
     // Load the mock output image
     const mockImageUrl = "/tutorial/owl-aviator.png";
     try {
-      const response = await fetch(mockImageUrl);
+      const response = await fetch(mockImageUrl, { signal });
       const blob = await response.blob();
       const reader = new FileReader();
 
-      const base64Image = await new Promise<string>((resolve) => {
+      const base64Image = await new Promise<string>((resolve, reject) => {
+        signal.addEventListener("abort", () => {
+          reader.abort();
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
         reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(blob);
       });
 
@@ -1658,11 +1679,14 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         selectedHistoryIndex: 0,
       });
     } catch (error) {
-      // Fallback to error state if image not found
-      updateNodeData(nanoBananaNode.id, {
-        status: "error",
-        error: "Failed to load tutorial image",
-      });
+      if (error instanceof DOMException && error.name === "AbortError") {
+        updateNodeData(nanoBananaNode.id, { status: "idle", error: null });
+      } else {
+        updateNodeData(nanoBananaNode.id, {
+          status: "error",
+          error: "Failed to load tutorial image",
+        });
+      }
     }
 
     // Clear execution state

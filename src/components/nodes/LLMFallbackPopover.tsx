@@ -83,7 +83,7 @@ export function LLMFallbackPopover({ nodeId, onClose }: LLMFallbackPopoverProps)
       modelId: model,
       displayName: label,
     };
-    updateNodeData(nodeId, { fallbackModel });
+    updateNodeData(nodeId, { fallbackModel, fallbackParameters: {} });
     onClose();
   };
 
