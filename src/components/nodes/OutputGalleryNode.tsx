@@ -106,7 +106,7 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
         setLightboxIndex(newLength - 1);
       }
     }
-  }, [displayMedia, nodeData.images, nodeData.videos, updateNodeData, id, lightboxIndex]);
+  }, [displayMedia, nodeData.images, nodeData.imageRefs, nodeData.videos, nodeData.videoRefs, updateNodeData, id, lightboxIndex]);
 
   const handleExtractToInputNodes = useCallback(() => {
     const galleryNode = getNodes().find((n) => n.id === id);
@@ -237,6 +237,7 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
                 <button
                   key={idx}
                   onClick={() => openLightbox(idx)}
+                  aria-label={item.type === "video" ? `Open video ${idx + 1}` : `Open image ${idx + 1}`}
                   className="aspect-square rounded border border-neutral-700 hover:border-neutral-500 overflow-hidden transition-colors relative"
                 >
                   {item.type === "video" ? (
