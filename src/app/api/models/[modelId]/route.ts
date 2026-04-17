@@ -748,6 +748,65 @@ function getKieSchema(modelId: string): ExtractedSchema {
         { name: "image_input", type: "image", required: false, label: "Image", isArray: true },
       ],
     },
+    "nano-banana-2": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "2:3", "3:2", "4:3", "16:9", "9:16", "21:9", "auto"], default: "auto" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["512", "1K", "2K", "4K"], default: "1K" },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: true, label: "Prompt" },
+        { name: "image_input", type: "image", required: false, label: "Image", isArray: true },
+      ],
+    },
+    "google/imagen4": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "3:4", "4:3", "9:16", "16:9"], default: "1:1" },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "google/imagen4-fast": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "3:4", "4:3", "9:16", "16:9"], default: "16:9" },
+        { name: "num_images", type: "integer", description: "Number of images to generate", default: 1, minimum: 1, maximum: 4 },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "google/imagen4-ultra": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "3:4", "4:3", "9:16", "16:9"], default: "1:1" },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "seedream/5-lite-text-to-image": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "4:3", "3:4", "16:9", "9:16", "2:3", "3:2", "21:9"], default: "1:1" },
+        { name: "quality", type: "string", description: "Output quality", enum: ["basic", "high"], default: "basic" },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "seedream/5-lite-image-to-image": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["1:1", "4:3", "3:4", "16:9", "9:16", "2:3", "3:2", "21:9"], default: "1:1" },
+        { name: "quality", type: "string", description: "Output quality", enum: ["basic", "high"], default: "basic" },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: true, label: "Prompt" },
+        { name: "image_urls", type: "image", required: true, label: "Image", isArray: true },
+      ],
+    },
+    "wan/2-7-image": {
+      parameters: [
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["1K", "2K"], default: "2K" },
+        { name: "n", type: "integer", description: "Number of images to generate", default: 4, minimum: 1, maximum: 8 },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: true, label: "Prompt" },
+        { name: "input_urls", type: "image", required: false, label: "Image", isArray: true },
+      ],
+    },
     "grok-imagine/text-to-image": {
       parameters: [
         { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["2:3", "3:2", "1:1", "16:9", "9:16"], default: "1:1" },
@@ -799,6 +858,56 @@ function getKieSchema(modelId: string): ExtractedSchema {
       inputs: [{ name: "prompt", type: "text", required: true, label: "Sound Description" }],
     },
     // ============ Video models ============
+    "bytedance/seedance-2/text-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (4-15)", default: 8, minimum: 4, maximum: 15 },
+        { name: "generate_audio", type: "boolean", description: "Generate audio with the video", default: true },
+        { name: "web_search", type: "boolean", description: "Enable web search for prompt enhancement", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "bytedance/seedance-2/image-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (4-15)", default: 8, minimum: 4, maximum: 15 },
+        { name: "generate_audio", type: "boolean", description: "Generate audio with the video", default: true },
+        { name: "web_search", type: "boolean", description: "Enable web search for prompt enhancement", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: false, label: "Prompt" },
+        { name: "first_frame_url", type: "image", required: true, label: "Image" },
+      ],
+    },
+    "bytedance/seedance-2-fast/text-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (4-15)", default: 8, minimum: 4, maximum: 15 },
+        { name: "generate_audio", type: "boolean", description: "Generate audio with the video", default: true },
+        { name: "web_search", type: "boolean", description: "Enable web search for prompt enhancement", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [{ name: "prompt", type: "text", required: true, label: "Prompt" }],
+    },
+    "bytedance/seedance-2-fast/image-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (4-15)", default: 8, minimum: 4, maximum: 15 },
+        { name: "generate_audio", type: "boolean", description: "Generate audio with the video", default: true },
+        { name: "web_search", type: "boolean", description: "Enable web search for prompt enhancement", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: false, label: "Prompt" },
+        { name: "first_frame_url", type: "image", required: true, label: "Image" },
+      ],
+    },
     "grok-imagine/text-to-video": {
       parameters: [
         { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["2:3", "3:2", "1:1", "16:9", "9:16"], default: "2:3" },
@@ -852,6 +961,43 @@ function getKieSchema(modelId: string): ExtractedSchema {
         { name: "video_urls", type: "image", required: true, label: "Video", isArray: true },
       ],
     },
+    "kling-3.0/video/text-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "duration", type: "string", description: "Video duration in seconds", enum: ["3", "5", "10", "15"], default: "5" },
+        { name: "mode", type: "string", description: "Generation mode", enum: ["std", "pro"], default: "pro" },
+        { name: "sound", type: "boolean", description: "Enable sound generation", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: false, label: "Prompt" },
+      ],
+    },
+    "kling-3.0/video/image-to-video": {
+      parameters: [
+        { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
+        { name: "duration", type: "string", description: "Video duration in seconds", enum: ["3", "5", "10", "15"], default: "5" },
+        { name: "mode", type: "string", description: "Generation mode", enum: ["std", "pro"], default: "pro" },
+        { name: "sound", type: "boolean", description: "Enable sound generation", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: false, label: "Prompt" },
+        { name: "image_urls", type: "image", required: true, label: "Image", isArray: true },
+      ],
+    },
+    "kling-3.0/motion-control": {
+      parameters: [
+        { name: "mode", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "720p" },
+        { name: "character_orientation", type: "string", description: "Character orientation source", enum: ["image", "video"], default: "video" },
+        { name: "background_source", type: "string", description: "Background source", enum: ["input_video", "input_image"], default: "input_video" },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: false, label: "Prompt" },
+        { name: "input_urls", type: "image", required: true, label: "Image", isArray: true },
+        { name: "video_urls", type: "image", required: true, label: "Video", isArray: true },
+      ],
+    },
     "kling/v2-5-turbo-text-to-video-pro": {
       parameters: [
         { name: "aspect_ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1"], default: "16:9" },
@@ -895,6 +1041,35 @@ function getKieSchema(modelId: string): ExtractedSchema {
       inputs: [
         { name: "prompt", type: "text", required: false, label: "Prompt" },
         { name: "image_urls", type: "image", required: true, label: "Image", isArray: true },
+      ],
+    },
+    "wan/2-7-text-to-video": {
+      parameters: [
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "1080p" },
+        { name: "ratio", type: "string", description: "Output aspect ratio", enum: ["16:9", "9:16", "1:1", "4:3", "3:4"], default: "16:9" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (2-15)", default: 5, minimum: 2, maximum: 15 },
+        { name: "prompt_extend", type: "boolean", description: "Enable prompt extension", default: true },
+        { name: "watermark", type: "boolean", description: "Add watermark", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: true, label: "Prompt" },
+        { name: "negative_prompt", type: "text", required: false, label: "Negative Prompt" },
+      ],
+    },
+    "wan/2-7-image-to-video": {
+      parameters: [
+        { name: "resolution", type: "string", description: "Output resolution", enum: ["720p", "1080p"], default: "1080p" },
+        { name: "duration", type: "integer", description: "Video duration in seconds (2-15)", default: 5, minimum: 2, maximum: 15 },
+        { name: "prompt_extend", type: "boolean", description: "Enable prompt extension", default: true },
+        { name: "watermark", type: "boolean", description: "Add watermark", default: false },
+        { name: "seed", type: "integer", description: "Random seed for reproducibility", minimum: 0 },
+      ],
+      inputs: [
+        { name: "prompt", type: "text", required: false, label: "Prompt" },
+        { name: "negative_prompt", type: "text", required: false, label: "Negative Prompt" },
+        { name: "first_frame_url", type: "image", required: true, label: "First Frame" },
+        { name: "last_frame_url", type: "image", required: false, label: "Last Frame" },
       ],
     },
     "wan/2-6-video-to-video": {

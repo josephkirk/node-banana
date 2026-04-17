@@ -152,6 +152,22 @@ function ModelParametersInner({
     fetchSchema();
   }, [modelId, provider, replicateApiKey, falApiKey, kieApiKey, wavespeedApiKey, onInputsLoaded]);
 
+  // Pre-populate schema defaults into parameters
+  useEffect(() => {
+    if (schema.length === 0) return;
+    const defaults: Record<string, unknown> = {};
+    let hasNewDefaults = false;
+    for (const param of schema) {
+      if (param.default !== undefined && parameters[param.name] === undefined) {
+        defaults[param.name] = param.default;
+        hasNewDefaults = true;
+      }
+    }
+    if (hasNewDefaults) {
+      onParametersChange({ ...parameters, ...defaults });
+    }
+  }, [schema, parameters, onParametersChange]);
+
   // Notify parent to resize node when schema loads
   useEffect(() => {
     if (schema.length > 0 && onExpandChange) {
