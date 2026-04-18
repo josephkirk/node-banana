@@ -162,7 +162,7 @@ const KIE_MODELS: ProviderModel[] = [
     provider: "kie",
     capabilities: ["text-to-image", "image-to-image"],
     coverImage: undefined,
-    pageUrl: "https://docs.kie.ai/market/google/nano-banana-2",
+    pageUrl: "https://docs.kie.ai/market/google/nanobanana2",
   },
   {
     id: "google/imagen4",

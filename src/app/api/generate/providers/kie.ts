@@ -105,7 +105,7 @@ export function getKieModelDefaults(modelId: string): Record<string, unknown> {
       return {
         aspect_ratio: "16:9",
         resolution: "720p",
-        duration: 8,
+        duration: 5,
         generate_audio: true,
         web_search: false,
       };
