@@ -417,10 +417,22 @@ export async function pollKieTaskCompletion(
     });
 
     if (!response.ok) {
+      // 404/422 can happen transiently when the task isn't registered yet — retry
+      if (response.status === 404 || response.status === 422) {
+        console.log(`[API:${requestId}] Kie poll returned ${response.status}, task not ready yet — retrying`);
+        continue;
+      }
       return { success: false, error: `Failed to poll status: ${response.status}` };
     }
 
     const result = await response.json();
+
+    // Kie API can return HTTP 200 with code != 200 (e.g. "recordInfo is null")
+    if (result.code && result.code !== 200) {
+      console.log(`[API:${requestId}] Kie poll returned code ${result.code}: ${result.msg || ""} — retrying`);
+      continue;
+    }
+
     // Kie API returns "state" in result.data.state (not "status")
     const state = (result.data?.state || result.state || result.status || "").toUpperCase();
 
