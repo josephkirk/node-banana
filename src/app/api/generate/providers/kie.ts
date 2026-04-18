@@ -444,6 +444,14 @@ export async function pollKieTaskCompletion(
 }
 
 
+// Map internal model IDs to the API model value expected by Kie
+// Seedance models use a base ID without the capability suffix
+function getKieApiModelId(modelId: string): string {
+  if (modelId.startsWith("bytedance/seedance-2/")) return "bytedance/seedance-2";
+  if (modelId.startsWith("bytedance/seedance-2-fast/")) return "bytedance/seedance-2-fast";
+  return modelId;
+}
+
 export function isVeoModel(modelId: string): boolean {
   return modelId.startsWith("veo3/") || modelId.startsWith("veo3-fast/");
 }
@@ -735,8 +743,11 @@ export async function generateWithKie(
   }
 
   // All remaining Kie models use the standard createTask endpoint
+  // Strip capability suffixes from model IDs that use them internally
+  // e.g. "bytedance/seedance-2/text-to-video" → "bytedance/seedance-2"
+  const apiModelId = getKieApiModelId(modelId);
   const requestBody: Record<string, unknown> = {
-    model: modelId,
+    model: apiModelId,
     input: inputParams,
   };
 
