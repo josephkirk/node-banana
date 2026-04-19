@@ -9,6 +9,7 @@ import { checkEncoderSupport } from "@/hooks/useStitchVideos";
 import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type EaseCurveNodeType = Node<EaseCurveNodeData, "easeCurve">;
 
@@ -56,14 +57,7 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "35%" }}
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{ right: "calc(100% + 8px)", top: "calc(35% - 7px)", color: "rgb(168, 85, 247)" }}
-        >
-          Video In
-        </div>
-      )}
+      <HandleLabel label="Video In" side="target" color="rgb(168, 85, 247)" top="calc(35% - 7px)" visible={showLabels} />
 
       {/* Video Out (source, right, 35%) */}
       <Handle
@@ -74,14 +68,7 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "35%" }}
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{ left: "calc(100% + 8px)", top: "calc(35% - 7px)", color: "rgb(168, 85, 247)" }}
-        >
-          Video Out
-        </div>
-      )}
+      <HandleLabel label="Video Out" side="source" color="rgb(168, 85, 247)" top="calc(35% - 7px)" visible={showLabels} />
 
       {/* Settings In (target, left, 75%) */}
       <Handle
@@ -92,14 +79,7 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "75%", background: "rgb(190, 242, 100)" }}
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{ right: "calc(100% + 8px)", top: "calc(75% - 7px)", color: "rgb(190, 242, 100)" }}
-        >
-          Settings
-        </div>
-      )}
+      <HandleLabel label="Settings" side="target" color="rgb(190, 242, 100)" top="calc(75% - 7px)" visible={showLabels} />
 
       {/* Settings Out (source, right, 75%) */}
       <Handle
@@ -110,14 +90,7 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "75%", background: "rgb(190, 242, 100)" }}
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{ left: "calc(100% + 8px)", top: "calc(75% - 7px)", color: "rgb(190, 242, 100)" }}
-        >
-          Settings
-        </div>
-      )}
+      <HandleLabel label="Settings" side="source" color="rgb(190, 242, 100)" top="calc(75% - 7px)" visible={showLabels} />
     </>
   );
 

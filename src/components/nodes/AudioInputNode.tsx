@@ -9,6 +9,7 @@ import { useAudioVisualization } from "@/hooks/useAudioVisualization";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { downloadMedia } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type AudioInputNodeType = Node<AudioInputNodeData, "audioInput">;
 
@@ -264,19 +265,7 @@ export function AudioInputNode({ id, data, selected }: NodeProps<AudioInputNodeT
         data-handletype="audio"
         style={{ background: "rgb(167, 139, 250)" }}
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{
-            right: "calc(100% + 8px)",
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-audio)",
-            zIndex: 10,
-          }}
-        >
-          Audio
-        </div>
-      )}
+      <HandleLabel label="Audio" side="target" color="var(--handle-color-audio)" visible={showLabels} />
       <Handle
         type="source"
         position={Position.Right}
@@ -284,19 +273,7 @@ export function AudioInputNode({ id, data, selected }: NodeProps<AudioInputNodeT
         data-handletype="audio"
         style={{ background: "rgb(167, 139, 250)" }}
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{
-            left: "calc(100% + 8px)",
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-audio)",
-            zIndex: 10,
-          }}
-        >
-          Audio
-        </div>
-      )}
+      <HandleLabel label="Audio" side="source" color="var(--handle-color-audio)" visible={showLabels} />
     </BaseNode>
   );
 }

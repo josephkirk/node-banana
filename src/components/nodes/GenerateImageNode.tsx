@@ -19,6 +19,7 @@ import { browseRegistry } from "@/utils/browseRegistry";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { downloadMedia } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 /** Reorder items so they read column-first in a row-based CSS grid.
  *  e.g. [1,2,3,4,5,6,7,8] with 2 cols → [1,5,2,6,3,7,4,8] */
@@ -671,19 +672,7 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
         isConnectable={true}
       />
       {/* Image label */}
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{
-            right: `calc(100% + 8px)`,
-            top: "calc(35% - 18px)",
-            color: "var(--handle-color-image)",
-            zIndex: 10,
-          }}
-        >
-          Image
-        </div>
-      )}
+      <HandleLabel label="Image" side="target" color="var(--handle-color-image)" top="calc(35% - 18px)" visible={showLabels} />
       <Handle
         type="target"
         position={Position.Left}
@@ -694,19 +683,7 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
         isConnectable={true}
       />
       {/* Prompt label */}
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{
-            right: `calc(100% + 8px)`,
-            top: "calc(65% - 18px)",
-            color: "var(--handle-color-text)",
-            zIndex: 10,
-          }}
-        >
-          Prompt
-        </div>
-      )}
+      <HandleLabel label="Prompt" side="target" color="var(--handle-color-text)" top="calc(65% - 18px)" visible={showLabels} />
       {/* Output handle */}
       <Handle
         type="source"
@@ -716,19 +693,7 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
         data-handletype="image"
       />
       {/* Output label */}
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{
-            left: `calc(100% + 8px)`,
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-image)",
-            zIndex: 10,
-          }}
-        >
-          Image
-        </div>
-      )}
+      <HandleLabel label="Image" side="source" color="var(--handle-color-image)" visible={showLabels} />
 
       <div
         className="relative w-full h-full min-h-0 overflow-hidden rounded-lg"

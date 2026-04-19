@@ -9,6 +9,7 @@ import { ImageInputNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { downloadMedia } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type ImageInputNodeType = Node<ImageInputNodeData, "imageInput">;
 
@@ -165,19 +166,7 @@ export function ImageInputNode({ id, data, selected }: NodeProps<ImageInputNodeT
         data-tutorial="node-input-handle"
         className="!bg-gray-500"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{
-            right: "calc(100% + 8px)",
-            top: "calc(50% - 18px)",
-            color: "#6b7280",
-            zIndex: 10,
-          }}
-        >
-          Ref
-        </div>
-      )}
+      <HandleLabel label="Ref" side="target" color="#6b7280" visible={showLabels} />
       <Handle
         type="source"
         position={Position.Right}
@@ -185,19 +174,7 @@ export function ImageInputNode({ id, data, selected }: NodeProps<ImageInputNodeT
         data-handletype="image"
         data-tutorial="node-output-handle"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{
-            left: "calc(100% + 8px)",
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-image)",
-            zIndex: 10,
-          }}
-        >
-          Image
-        </div>
-      )}
+      <HandleLabel label="Image" side="source" color="var(--handle-color-image)" visible={showLabels} />
     </BaseNode>
   );
 }

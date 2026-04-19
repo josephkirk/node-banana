@@ -7,6 +7,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { VideoFrameGrabNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type VideoFrameGrabNodeType = Node<VideoFrameGrabNodeData, "videoFrameGrab">;
 
@@ -58,14 +59,7 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{ right: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(168, 85, 247)" }}
-        >
-          Video In
-        </div>
-      )}
+      <HandleLabel label="Video In" side="target" color="rgb(168, 85, 247)" top="calc(50% - 7px)" visible={showLabels} />
 
       {/* Image Out (source, right, 50%) */}
       <Handle
@@ -76,14 +70,7 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{ left: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(59, 130, 246)" }}
-        >
-          Image Out
-        </div>
-      )}
+      <HandleLabel label="Image Out" side="source" color="rgb(59, 130, 246)" top="calc(50% - 7px)" visible={showLabels} />
 
       <div className="flex-1 flex flex-col min-h-0 gap-2">
         {/* Image preview area */}

@@ -11,6 +11,7 @@ import { GLBViewerNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { downloadMedia } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -522,18 +523,7 @@ export function GLBViewerNode({ id, data, selected }: NodeProps<GLBViewerNodeTyp
         style={{ top: "50%" }}
         data-handletype="3d"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{
-            right: `calc(100% + 8px)`,
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-3d)",
-          }}
-        >
-          3D
-        </div>
-      )}
+      <HandleLabel label="3D" side="target" color="var(--handle-color-3d)" visible={showLabels} />
 
       {/* Output handle - image (captured viewport) */}
       <Handle
@@ -543,18 +533,7 @@ export function GLBViewerNode({ id, data, selected }: NodeProps<GLBViewerNodeTyp
         style={{ top: "50%" }}
         data-handletype="image"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{
-            left: `calc(100% + 8px)`,
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-image)",
-          }}
-        >
-          Image
-        </div>
-      )}
+      <HandleLabel label="Image" side="source" color="var(--handle-color-image)" visible={showLabels} />
     </BaseNode>
   );
 }

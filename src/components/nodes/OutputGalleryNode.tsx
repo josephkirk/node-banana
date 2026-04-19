@@ -10,6 +10,7 @@ import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { defaultNodeDimensions } from "@/store/utils/nodeDefaults";
 import { downloadMedia as downloadMediaUtil } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type MediaItem = { type: "image" | "video"; src: string };
 
@@ -187,14 +188,7 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
           data-handletype="image"
           style={{ top: "40%" }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{ right: "calc(100% + 8px)", top: "calc(40% - 18px)", color: "rgb(59, 130, 246)" }}
-          >
-            Image
-          </div>
-        )}
+        <HandleLabel label="Image" side="target" color="rgb(59, 130, 246)" top="calc(40% - 18px)" visible={showLabels} />
 
         <Handle
           type="target"
@@ -203,14 +197,7 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
           data-handletype="video"
           style={{ top: "60%" }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{ right: "calc(100% + 8px)", top: "calc(60% - 18px)", color: "rgb(168, 85, 247)" }}
-          >
-            Video
-          </div>
-        )}
+        <HandleLabel label="Video" side="target" color="rgb(168, 85, 247)" top="calc(60% - 18px)" visible={showLabels} />
 
         {displayMedia.length > 0 && (
           <div className="flex items-center justify-between px-2 py-1">

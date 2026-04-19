@@ -9,6 +9,7 @@ import { AnnotationNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { downloadMedia } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type AnnotationNodeType = Node<AnnotationNodeData, "annotation">;
 
@@ -116,38 +117,14 @@ export function AnnotationNode({ id, data, selected }: NodeProps<AnnotationNodeT
         id="image"
         data-handletype="image"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{
-            right: "calc(100% + 8px)",
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-image)",
-            zIndex: 10,
-          }}
-        >
-          Image
-        </div>
-      )}
+      <HandleLabel label="Image" side="target" color="var(--handle-color-image)" visible={showLabels} />
       <Handle
         type="source"
         position={Position.Right}
         id="image"
         data-handletype="image"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{
-            left: "calc(100% + 8px)",
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-image)",
-            zIndex: 10,
-          }}
-        >
-          Image
-        </div>
-      )}
+      <HandleLabel label="Image" side="source" color="var(--handle-color-image)" visible={showLabels} />
 
       {displayImage ? (
         <div

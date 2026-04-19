@@ -9,6 +9,7 @@ import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
 import { SettingsTabBar } from "./SettingsTabBar";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 // LLM providers and models
 const LLM_PROVIDERS: { value: LLMProvider; label: string }[] = [
@@ -275,19 +276,7 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
         style={{ top: "35%" }}
         data-handletype="image"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{
-            right: "calc(100% + 8px)",
-            top: "calc(35% - 18px)",
-            color: "var(--handle-color-image)",
-            zIndex: 10,
-          }}
-        >
-          Image
-        </div>
-      )}
+      <HandleLabel label="Image" side="target" color="var(--handle-color-image)" top="calc(35% - 18px)" visible={showLabels} />
       {/* Text input */}
       <Handle
         type="target"
@@ -296,19 +285,7 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
         style={{ top: "65%" }}
         data-handletype="text"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{
-            right: "calc(100% + 8px)",
-            top: "calc(65% - 18px)",
-            color: "var(--handle-color-text)",
-            zIndex: 10,
-          }}
-        >
-          Prompt
-        </div>
-      )}
+      <HandleLabel label="Prompt" side="target" color="var(--handle-color-text)" top="calc(65% - 18px)" visible={showLabels} />
       {/* Text output */}
       <Handle
         type="source"
@@ -316,19 +293,7 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
         id="text"
         data-handletype="text"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{
-            left: "calc(100% + 8px)",
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-text)",
-            zIndex: 10,
-          }}
-        >
-          Text
-        </div>
-      )}
+      <HandleLabel label="Text" side="source" color="var(--handle-color-text)" visible={showLabels} />
 
       <div className="relative w-full h-full min-h-0 overflow-hidden rounded-lg">
         {nodeData.status === "loading" ? (

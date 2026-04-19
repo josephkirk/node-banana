@@ -8,6 +8,7 @@ import { SplitGridNodeData } from "@/types";
 import { SplitGridSettingsModal } from "../SplitGridSettingsModal";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type SplitGridNodeType = Node<SplitGridNodeData, "splitGrid">;
 
@@ -77,19 +78,7 @@ export function SplitGridNode({ id, data, selected }: NodeProps<SplitGridNodeTyp
           data-handletype="image"
           style={{ zIndex: 10 }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: "calc(100% + 8px)",
-              top: "calc(50% - 18px)",
-              color: "var(--handle-color-image)",
-              zIndex: 10,
-            }}
-          >
-            Image
-          </div>
-        )}
+        <HandleLabel label="Image" side="target" color="var(--handle-color-image)" visible={showLabels} />
 
         {/* Reference output handle for visual links to child nodes */}
         <Handle
@@ -100,19 +89,7 @@ export function SplitGridNode({ id, data, selected }: NodeProps<SplitGridNodeTyp
           className="!bg-gray-500"
           style={{ zIndex: 10 }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-            style={{
-              left: "calc(100% + 8px)",
-              top: "calc(50% - 18px)",
-              color: "#6b7280",
-              zIndex: 10,
-            }}
-          >
-            Ref
-          </div>
-        )}
+        <HandleLabel label="Ref" side="source" color="#6b7280" visible={showLabels} />
 
         {/* Full-bleed preview area */}
         {nodeData.sourceImage ? (

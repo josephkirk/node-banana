@@ -7,6 +7,7 @@ import { BaseNode } from "./BaseNode";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { PromptNodeData } from "@/types";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type PromptNodeType = Node<PromptNodeData, "prompt">;
 
@@ -105,19 +106,7 @@ export function PromptNode({ id, data, selected }: NodeProps<PromptNodeType>) {
           data-handletype="text"
           style={{ zIndex: 10 }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: "calc(100% + 8px)",
-              top: "calc(50% - 18px)",
-              color: "var(--handle-color-text)",
-              zIndex: 10,
-            }}
-          >
-            Text
-          </div>
-        )}
+        <HandleLabel label="Text" side="target" color="var(--handle-color-text)" visible={showLabels} />
 
         <textarea
           value={localPrompt}
@@ -146,19 +135,7 @@ export function PromptNode({ id, data, selected }: NodeProps<PromptNodeType>) {
           data-tutorial="prompt-output-handle"
           style={{ zIndex: 10 }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-            style={{
-              left: "calc(100% + 8px)",
-              top: "calc(50% - 18px)",
-              color: "var(--handle-color-text)",
-              zIndex: 10,
-            }}
-          >
-            Text
-          </div>
-        )}
+        <HandleLabel label="Text" side="source" color="var(--handle-color-text)" visible={showLabels} />
       </BaseNode>
 
       {/* Variable Naming Dialog - rendered via portal */}

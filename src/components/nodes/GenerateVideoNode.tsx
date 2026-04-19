@@ -20,6 +20,7 @@ import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 import { downloadMedia } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 // Video generation capabilities
 const VIDEO_CAPABILITIES: ModelCapability[] = ["text-to-video", "image-to-video", "audio-to-video"];
@@ -571,20 +572,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
                   title={handle.description || handle.label}
                 />
                 {/* Handle label - positioned outside node, above the connector */}
-                {showLabels && (
-                  <div
-                    className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-                    style={{
-                      right: `calc(100% + 8px)`,
-                      top: `calc(${topPercent}% - 18px)`,
-                      color: getHandleColor(handle.type),
-                      opacity: handle.isPlaceholder ? 0.3 : 1,
-                      zIndex: 10,
-                    }}
-                  >
-                    {handle.label}
-                  </div>
-                )}
+                <HandleLabel label={handle.label} side="target" color={getHandleColor(handle.type)} top={`calc(${topPercent}% - 18px)`} visible={showLabels} opacity={handle.isPlaceholder ? 0.3 : 1} />
               </React.Fragment>
             );
           });
@@ -635,19 +623,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
             isConnectable={true}
           />
           {/* Default image label */}
-          {showLabels && (
-            <div
-              className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-              style={{
-                right: `calc(100% + 8px)`,
-                top: "calc(35% - 18px)",
-                color: "var(--handle-color-image)",
-                zIndex: 10,
-              }}
-            >
-              Image
-            </div>
-          )}
+          <HandleLabel label="Image" side="target" color="var(--handle-color-image)" top="calc(35% - 18px)" visible={showLabels} />
           <Handle
             type="target"
             position={Position.Left}
@@ -656,19 +632,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
             data-handletype="text"
           />
           {/* Default text label */}
-          {showLabels && (
-            <div
-              className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-              style={{
-                right: `calc(100% + 8px)`,
-                top: "calc(65% - 18px)",
-                color: "var(--handle-color-text)",
-                zIndex: 10,
-              }}
-            >
-              Prompt
-            </div>
-          )}
+          <HandleLabel label="Prompt" side="target" color="var(--handle-color-text)" top="calc(65% - 18px)" visible={showLabels} />
         </>
       )}
       {/* Video output */}
@@ -680,19 +644,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
         style={{ zIndex: 10 }}
       />
       {/* Output label */}
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{
-            left: `calc(100% + 8px)`,
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-image)",
-            zIndex: 10,
-          }}
-        >
-          Video
-        </div>
-      )}
+      <HandleLabel label="Video" side="source" color="var(--handle-color-image)" visible={showLabels} />
 
       <div className="relative w-full h-full min-h-0 overflow-hidden rounded-lg">
         {/* Preview area */}

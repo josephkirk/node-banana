@@ -11,6 +11,7 @@ import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { downloadMedia, MediaType } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type OutputNodeType = Node<OutputNodeData, "output">;
 
@@ -102,19 +103,7 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
           data-handletype="image"
           style={{ top: "35%", zIndex: 10 }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: "calc(100% + 8px)",
-              top: "calc(35% - 18px)",
-              color: "var(--handle-color-image)",
-              zIndex: 10,
-            }}
-          >
-            Image
-          </div>
-        )}
+        <HandleLabel label="Image" side="target" color="var(--handle-color-image)" top="calc(35% - 18px)" visible={showLabels} />
         <Handle
           type="target"
           position={Position.Left}
@@ -122,19 +111,7 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
           data-handletype="video"
           style={{ top: "50%", zIndex: 10 }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: "calc(100% + 8px)",
-              top: "calc(50% - 18px)",
-              color: "var(--handle-color-video)",
-              zIndex: 10,
-            }}
-          >
-            Video
-          </div>
-        )}
+        <HandleLabel label="Video" side="target" color="var(--handle-color-video)" visible={showLabels} />
         <Handle
           type="target"
           position={Position.Left}
@@ -142,19 +119,7 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
           data-handletype="audio"
           style={{ top: "65%", background: "rgb(167, 139, 250)", zIndex: 10 }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: "calc(100% + 8px)",
-              top: "calc(65% - 18px)",
-              color: "var(--handle-color-audio)",
-              zIndex: 10,
-            }}
-          >
-            Audio
-          </div>
-        )}
+        <HandleLabel label="Audio" side="target" color="var(--handle-color-audio)" top="calc(65% - 18px)" visible={showLabels} />
 
         <div className="relative w-full h-full overflow-hidden rounded-lg">
         {contentSrc ? (

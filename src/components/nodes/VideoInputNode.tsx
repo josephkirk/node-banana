@@ -8,6 +8,7 @@ import { VideoInputNodeData } from "@/types";
 import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { downloadMedia } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type VideoInputNodeType = Node<VideoInputNodeData, "videoInput">;
 
@@ -184,38 +185,14 @@ export function VideoInputNode({ id, data, selected }: NodeProps<VideoInputNodeT
         id="video"
         data-handletype="video"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{
-            right: "calc(100% + 8px)",
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-video)",
-            zIndex: 10,
-          }}
-        >
-          Video
-        </div>
-      )}
+      <HandleLabel label="Video" side="target" color="var(--handle-color-video)" visible={showLabels} />
       <Handle
         type="source"
         position={Position.Right}
         id="video"
         data-handletype="video"
       />
-      {showLabels && (
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-          style={{
-            left: "calc(100% + 8px)",
-            top: "calc(50% - 18px)",
-            color: "var(--handle-color-video)",
-            zIndex: 10,
-          }}
-        >
-          Video
-        </div>
-      )}
+      <HandleLabel label="Video" side="source" color="var(--handle-color-video)" visible={showLabels} />
     </BaseNode>
   );
 }

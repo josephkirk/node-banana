@@ -17,6 +17,7 @@ import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 import { downloadMedia } from "@/utils/downloadMedia";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type GenerateAudioNodeType = Node<GenerateAudioNodeData, "generateAudio">;
 
@@ -243,19 +244,7 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
             }}
             title={input.label}
           />
-          {showLabels && (
-            <div
-              className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-              style={{
-                right: "calc(100% + 8px)",
-                top: `${topPx - 18}px`,
-                color: handleType === "image" ? "var(--handle-color-image)" : "var(--handle-color-text)",
-                zIndex: 10,
-              }}
-            >
-              {input.label}
-            </div>
-          )}
+          <HandleLabel label={input.label} side="target" color={handleType === "image" ? "var(--handle-color-image)" : "var(--handle-color-text)"} top={`${topPx - 18}px`} visible={showLabels} />
         </React.Fragment>
       );
     });
@@ -497,19 +486,7 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
           data-handletype="audio"
           style={{ background: "rgb(167, 139, 250)" }}
         />
-        {showLabels && (
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-            style={{
-              left: "calc(100% + 8px)",
-              top: "calc(50% - 18px)",
-              color: "var(--handle-color-audio)",
-              zIndex: 10,
-            }}
-          >
-            Audio
-          </div>
-        )}
+        <HandleLabel label="Audio" side="source" color="var(--handle-color-audio)" visible={showLabels} />
 
       </BaseNode>
 
