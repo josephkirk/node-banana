@@ -16,7 +16,11 @@ import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
+import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
+import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 // Video generation capabilities
 const VIDEO_CAPABILITIES: ModelCapability[] = ["text-to-video", "image-to-video", "audio-to-video"];
@@ -54,11 +58,20 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
   const [modelsFetchError, setModelsFetchError] = useState<string | null>(null);
   const [isBrowseDialogOpen, setIsBrowseDialogOpen] = useState(false);
   const [isLoadingCarouselVideo, setIsLoadingCarouselVideo] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"primary" | "fallback">("primary");
+
+  useEffect(() => {
+    if (!nodeData.fallbackModel && settingsTab === "fallback") {
+      setSettingsTab("primary");
+    }
+  }, [nodeData.fallbackModel, settingsTab]);
+
   const videoBlobUrl = useVideoBlobUrl(nodeData.outputVideo ?? null);
   const videoAutoplayRef = useVideoAutoplay(id, selected);
 
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
+  const showLabels = useShowHandleLabels(selected);
 
   // Register browse callback for floating header button
   useEffect(() => {
@@ -395,14 +408,34 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
           onToggle={handleToggleParams}
           nodeId={id}
         >
-          {/* External provider parameters - reuse ModelParameters component */}
-          {nodeData.selectedModel?.modelId && (
+          {/* Tab bar for primary/fallback settings */}
+          {nodeData.fallbackModel && (
+            <SettingsTabBar
+              activeTab={settingsTab}
+              onTabChange={setSettingsTab}
+              primaryLabel={nodeData.selectedModel?.displayName || "Primary"}
+              fallbackLabel={nodeData.fallbackModel.displayName}
+            />
+          )}
+
+          {/* Primary tab: external provider parameters */}
+          {settingsTab === "primary" && nodeData.selectedModel?.modelId && (
             <ModelParameters
               modelId={nodeData.selectedModel.modelId}
               provider={currentProvider}
               parameters={nodeData.parameters || {}}
               onParametersChange={handleParametersChange}
               onInputsLoaded={handleInputsLoaded}
+            />
+          )}
+
+          {/* Fallback tab: fallback model parameters */}
+          {settingsTab === "fallback" && nodeData.fallbackModel && (
+            <ModelParameters
+              modelId={nodeData.fallbackModel.modelId}
+              provider={nodeData.fallbackModel.provider}
+              parameters={nodeData.fallbackParameters || {}}
+              onParametersChange={(p) => updateNodeData(id, { fallbackParameters: p })}
             />
           )}
         </InlineParameterPanel>
@@ -539,18 +572,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
                   title={handle.description || handle.label}
                 />
                 {/* Handle label - positioned outside node, above the connector */}
-                <div
-                  className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-                  style={{
-                    right: `calc(100% + 8px)`,
-                    top: `calc(${topPercent}% - 18px)`,
-                    color: getHandleColor(handle.type),
-                    opacity: handle.isPlaceholder ? 0.3 : 1,
-                    zIndex: 10,
-                  }}
-                >
-                  {handle.label}
-                </div>
+                <HandleLabel label={handle.label} side="target" color={getHandleColor(handle.type)} top={`calc(${topPercent}% - 18px)`} visible={showLabels} opacity={handle.isPlaceholder ? 0.3 : 1} />
               </React.Fragment>
             );
           });
@@ -601,17 +623,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
             isConnectable={true}
           />
           {/* Default image label */}
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: `calc(100% + 8px)`,
-              top: "calc(35% - 18px)",
-              color: "var(--handle-color-image)",
-              zIndex: 10,
-            }}
-          >
-            Image
-          </div>
+          <HandleLabel label="Image" side="target" color="var(--handle-color-image)" top="calc(35% - 18px)" visible={showLabels} />
           <Handle
             type="target"
             position={Position.Left}
@@ -620,17 +632,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
             data-handletype="text"
           />
           {/* Default text label */}
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: `calc(100% + 8px)`,
-              top: "calc(65% - 18px)",
-              color: "var(--handle-color-text)",
-              zIndex: 10,
-            }}
-          >
-            Prompt
-          </div>
+          <HandleLabel label="Prompt" side="target" color="var(--handle-color-text)" top="calc(65% - 18px)" visible={showLabels} />
         </>
       )}
       {/* Video output */}
@@ -642,17 +644,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
         style={{ zIndex: 10 }}
       />
       {/* Output label */}
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{
-          left: `calc(100% + 8px)`,
-          top: "calc(50% - 18px)",
-          color: "var(--handle-color-image)",
-          zIndex: 10,
-        }}
-      >
-        Video
-      </div>
+      <HandleLabel label="Video" side="source" color="var(--handle-color-video)" visible={showLabels} />
 
       <div className="relative w-full h-full min-h-0 overflow-hidden rounded-lg">
         {/* Preview area */}
@@ -668,6 +660,14 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
               className="w-full h-full object-cover"
               playsInline
             />
+            {nodeData.__usedFallback && (
+              <div
+                className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 text-[9px] font-medium pointer-events-auto z-10"
+                title={`Primary failed: ${nodeData.__primaryError ?? "unknown"}\nUsed fallback: ${nodeData.__fallbackModelUsed ?? ""}`}
+              >
+                Fallback used
+              </div>
+            )}
             {/* Loading overlay for generation */}
             {nodeData.status === "loading" && (
               <div className="absolute inset-0 bg-neutral-900/70 flex items-center justify-center">
@@ -732,8 +732,17 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
                 </svg>
               </div>
             )}
-            {/* Clear button */}
-            <div className="absolute top-1 right-1">
+            {/* Download + Clear buttons */}
+            <div className="absolute top-1 right-1 flex items-center gap-0.5">
+              <button
+                onClick={() => downloadMedia(nodeData.outputVideo!, "video").catch(() => {})}
+                className="w-5 h-5 bg-neutral-900/80 hover:bg-neutral-700 rounded flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+                title="Download video"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </button>
               <button
                 onClick={handleClearVideo}
                 className="w-5 h-5 bg-neutral-900/80 hover:bg-red-600/80 rounded flex items-center justify-center text-neutral-400 hover:text-white transition-colors"

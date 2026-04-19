@@ -63,7 +63,7 @@ function isTextHandle(handleId: string | null | undefined): boolean {
 /**
  * Extract output data and type from a source node
  */
-function getSourceOutput(
+export function getSourceOutput(
   sourceNode: WorkflowNode,
   sourceHandle: string | null | undefined,
   edgeData?: Record<string, unknown>
@@ -220,7 +220,7 @@ export function getConnectedInputsPure(
   const passthroughCache = new Map<string, ConnectedInputs>();
 
   edges
-    .filter((edge) => edge.target === nodeId)
+    .filter((edge) => edge.target === nodeId && !edge.data?.isLoop)
     .forEach((edge) => {
       const sourceNode = nodes.find((n) => n.id === edge.source);
       if (!sourceNode) return;
@@ -369,7 +369,7 @@ export function getConnectedInputsPure(
   // Extract easeCurve data from parent EaseCurve node (if not already set by router passthrough)
   if (!easeCurve) {
     const easeCurveEdge = edges.find(
-      (e) => e.target === nodeId && e.targetHandle === "easeCurve"
+      (e) => e.target === nodeId && e.targetHandle === "easeCurve" && !e.data?.isLoop
     );
     if (easeCurveEdge) {
       const sourceNode = nodes.find((n) => n.id === easeCurveEdge.source);
@@ -403,11 +403,13 @@ export function validateWorkflowPure(
   }
 
   // Check each Nano Banana node has required inputs (text required, image optional)
+  // Loop edges are excluded because they carry no data on the first iteration.
   nodes
     .filter((n) => n.type === "nanoBanana")
     .forEach((node) => {
       const textConnected = edges.some(
         (e) => e.target === node.id &&
+               !e.data?.isLoop &&
                (e.targetHandle === "text" || e.targetHandle?.startsWith("text-"))
       );
       if (!textConnected) {
@@ -421,6 +423,7 @@ export function validateWorkflowPure(
     .forEach((node) => {
       const textConnected = edges.some(
         (e) => e.target === node.id &&
+               !e.data?.isLoop &&
                (e.targetHandle === "text" || e.targetHandle?.startsWith("text-"))
       );
       if (!textConnected) {

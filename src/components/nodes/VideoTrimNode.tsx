@@ -8,6 +8,8 @@ import { VideoTrimNodeData } from "@/types";
 import { checkEncoderSupport } from "@/hooks/useStitchVideos";
 import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type VideoTrimNodeType = Node<VideoTrimNodeData, "videoTrim">;
 
@@ -31,6 +33,7 @@ export function VideoTrimNode({ id, data, selected }: NodeProps<VideoTrimNodeTyp
   // Track whether user wants to see source or output video
   const [showOutput, setShowOutput] = useState(false);
   const videoAutoplayRef = useVideoAutoplay(id, selected);
+  const showLabels = useShowHandleLabels(selected);
 
   // Keep a ref to endTime so the metadata callback reads fresh state
   const endTimeRef = useRef(nodeData.endTime);
@@ -173,12 +176,7 @@ export function VideoTrimNode({ id, data, selected }: NodeProps<VideoTrimNodeTyp
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{ right: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(168, 85, 247)" }}
-      >
-        Video In
-      </div>
+      <HandleLabel label="Video In" side="target" color="var(--handle-color-video)" top="calc(50% - 7px)" visible={showLabels} />
 
       {/* Video Out (source, right, 50%) */}
       <Handle
@@ -189,12 +187,7 @@ export function VideoTrimNode({ id, data, selected }: NodeProps<VideoTrimNodeTyp
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{ left: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(168, 85, 247)" }}
-      >
-        Video Out
-      </div>
+      <HandleLabel label="Video Out" side="source" color="var(--handle-color-video)" top="calc(50% - 7px)" visible={showLabels} />
     </>
   );
 

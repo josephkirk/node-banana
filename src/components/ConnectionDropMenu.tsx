@@ -412,6 +412,15 @@ const VIDEO_TARGET_OPTIONS: MenuOption[] = [
     ),
   },
   {
+    type: "outputGallery",
+    label: "Output Gallery",
+    icon: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+      </svg>
+    ),
+  },
+  {
     type: "router",
     label: "Router",
     icon: (
@@ -728,6 +737,7 @@ export function ConnectionDropMenu({
     <div
       ref={menuRef}
       tabIndex={-1}
+      data-tutorial="connection-drop-menu"
       className="fixed z-100 bg-neutral-800 border border-neutral-600 rounded-lg shadow-xl overflow-hidden min-w-[160px] outline-none"
       style={{
         left: position.x,
@@ -746,6 +756,7 @@ export function ConnectionDropMenu({
             key={option.type}
             onClick={() => onSelect({ type: option.type, isAction: option.isAction || false })}
             onMouseEnter={() => setSelectedIndex(index)}
+            data-tutorial={option.type === "nanoBanana" ? "generate-image-option" : undefined}
             className={`w-full px-3 py-2 text-left text-[11px] font-medium flex items-center gap-2 transition-colors ${
               index === selectedIndex
                 ? "bg-neutral-700 text-neutral-100"

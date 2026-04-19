@@ -7,6 +7,8 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { SplitGridNodeData } from "@/types";
 import { SplitGridSettingsModal } from "../SplitGridSettingsModal";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type SplitGridNodeType = Node<SplitGridNodeData, "splitGrid">;
 
@@ -20,6 +22,7 @@ export function SplitGridNode({ id, data, selected }: NodeProps<SplitGridNodeTyp
   const edges = useWorkflowStore((state) => state.edges);
   const nodes = useWorkflowStore((state) => state.nodes);
   const [showSettings, setShowSettings] = useState(false);
+  const showLabels = useShowHandleLabels(selected);
 
   // Reactively track the connected source image
   const hasIncomingImageConnection = useMemo(() => {
@@ -75,6 +78,7 @@ export function SplitGridNode({ id, data, selected }: NodeProps<SplitGridNodeTyp
           data-handletype="image"
           style={{ zIndex: 10 }}
         />
+        <HandleLabel label="Image" side="target" color="var(--handle-color-image)" visible={showLabels} />
 
         {/* Reference output handle for visual links to child nodes */}
         <Handle
@@ -85,6 +89,7 @@ export function SplitGridNode({ id, data, selected }: NodeProps<SplitGridNodeTyp
           className="!bg-gray-500"
           style={{ zIndex: 10 }}
         />
+        <HandleLabel label="Ref" side="source" color="#6b7280" visible={showLabels} />
 
         {/* Full-bleed preview area */}
         {nodeData.sourceImage ? (

@@ -6,6 +6,8 @@ import { BaseNode } from "./BaseNode";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { VideoFrameGrabNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type VideoFrameGrabNodeType = Node<VideoFrameGrabNodeData, "videoFrameGrab">;
 
@@ -17,6 +19,7 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
   const isRunning = useWorkflowStore((state) => state.isRunning);
   const edges = useWorkflowStore((state) => state.edges);
   const nodes = useWorkflowStore((state) => state.nodes);
+  const showLabels = useShowHandleLabels(selected);
 
   // Find connected source video from incoming edges
   const sourceVideoUrl = useMemo(() => {
@@ -56,12 +59,7 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{ right: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(168, 85, 247)" }}
-      >
-        Video In
-      </div>
+      <HandleLabel label="Video In" side="target" color="var(--handle-color-video)" top="calc(50% - 7px)" visible={showLabels} />
 
       {/* Image Out (source, right, 50%) */}
       <Handle
@@ -72,12 +70,7 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{ left: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(59, 130, 246)" }}
-      >
-        Image Out
-      </div>
+      <HandleLabel label="Image Out" side="source" color="rgb(59, 130, 246)" top="calc(50% - 7px)" visible={showLabels} />
 
       <div className="flex-1 flex flex-col min-h-0 gap-2">
         {/* Image preview area */}
@@ -109,31 +102,29 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
           )}
         </div>
 
-        {/* Frame position toggle (only when source video connected) */}
-        {hasSourceVideo && (
-          <div className="nodrag nowheel shrink-0 flex gap-1 px-1">
-            <button
-              onClick={() => updateNodeData(id, { framePosition: "first", outputImage: null })}
-              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                nodeData.framePosition === "first"
-                  ? "bg-blue-600 text-white"
-                  : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
-              }`}
-            >
-              First
-            </button>
-            <button
-              onClick={() => updateNodeData(id, { framePosition: "last", outputImage: null })}
-              className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
-                nodeData.framePosition === "last"
-                  ? "bg-blue-600 text-white"
-                  : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
-              }`}
-            >
-              Last
-            </button>
-          </div>
-        )}
+        {/* Frame position toggle */}
+        <div className="nodrag nowheel shrink-0 flex gap-1 px-1">
+          <button
+            onClick={() => updateNodeData(id, { framePosition: "first", outputImage: null })}
+            className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+              nodeData.framePosition === "first"
+                ? "bg-blue-600 text-white"
+                : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
+            }`}
+          >
+            First
+          </button>
+          <button
+            onClick={() => updateNodeData(id, { framePosition: "last", outputImage: null })}
+            className={`flex-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+              nodeData.framePosition === "last"
+                ? "bg-blue-600 text-white"
+                : "bg-neutral-800 text-neutral-400 hover:text-neutral-200"
+            }`}
+          >
+            Last
+          </button>
+        </div>
 
         {/* Extract Frame button */}
         <div className="shrink-0 flex justify-end px-1">

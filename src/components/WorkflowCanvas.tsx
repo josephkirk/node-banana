@@ -70,13 +70,18 @@ import { stripBinaryData } from "@/lib/chat/contextBuilder";
 import { PromptEditorModal } from "./modals/PromptEditorModal";
 import { PromptConstructorEditorModal } from "./modals/PromptConstructorEditorModal";
 import { resolveTextSourcesThroughRouters } from "@/store/utils/connectedInputs";
+import { wouldCreateCycle } from "@/store/utils/executionUtils";
 import { parseVarTags } from "@/utils/parseVarTags";
 import { AnnotationModal } from "./AnnotationModal";
+import { ModelSearchDialog } from "./modals/ModelSearchDialog";
+import { LLMFallbackPopover } from "./nodes/LLMFallbackPopover";
 import { browseRegistry } from "@/utils/browseRegistry";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { SplitGridSettingsModal } from "./SplitGridSettingsModal";
 import { createPortal } from "react-dom";
 import { useAnnotationStore } from "@/store/annotationStore";
+import { TutorialOverlay } from "./onboarding/TutorialOverlay";
+import { useFTUXStore } from "@/store/ftuxStore";
 
 const nodeTypes: NodeTypes = {
   imageInput: ImageInputNode,
@@ -167,7 +172,7 @@ const getNodeHandles = (nodeType: string): { inputs: string[]; outputs: string[]
     case "output":
       return { inputs: ["image", "video", "audio"], outputs: [] };
     case "outputGallery":
-      return { inputs: ["image"], outputs: [] };
+      return { inputs: ["image", "video"], outputs: [] };
     case "imageCompare":
       return { inputs: ["image"], outputs: [] };
     case "videoStitch":
@@ -321,7 +326,34 @@ export function WorkflowCanvas() {
   const [isBuildingWorkflow, setIsBuildingWorkflow] = useState(false);
   const [showNewProjectSetup, setShowNewProjectSetup] = useState(false);
   const [expandingNode, setExpandingNode] = useState<{ id: string; type: string } | null>(null);
+
+  // Fallback model picker state
+  const [fallbackDialogState, setFallbackDialogState] = useState<
+    | { nodeId: string; capability: "image" | "video" | "3d" | "audio" }
+    | null
+  >(null);
+  const [llmFallbackState, setLlmFallbackState] = useState<{ nodeId: string } | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const tutorialViewportSet = useRef(false);
+
+  // FTUX tutorial state (client-side only to avoid SSR hydration issues)
+  const [tutorialActive, setTutorialActive] = useState(false);
+  const [lockedFeatures, setLockedFeatures] = useState(false);
+
+  useEffect(() => {
+    // Subscribe to FTUX store on client-side only
+    const unsubscribe = useFTUXStore.subscribe((state) => {
+      setTutorialActive(state.tutorialActive);
+      setLockedFeatures(state.lockedFeatures);
+    });
+
+    // Initialize with current state
+    const currentState = useFTUXStore.getState();
+    setTutorialActive(currentState.tutorialActive);
+    setLockedFeatures(currentState.lockedFeatures);
+
+    return unsubscribe;
+  }, []);
 
   // Detect if canvas is empty for showing quickstart
   const isCanvasEmpty = nodes.length === 0;
@@ -344,6 +376,53 @@ export function WorkflowCanvas() {
       setNavigationTarget(null);
     }
   }, [navigationTarget, nodes, setCenter, setNavigationTarget]);
+
+  // Set default viewport when tutorial starts and first node is added
+  useEffect(() => {
+    if (tutorialActive && nodes.length > 0 && !tutorialViewportSet.current) {
+      tutorialViewportSet.current = true;
+      // Use setTimeout to ensure React Flow and node content are fully initialized
+      // Longer delay needed when nodes have pre-loaded image data
+      const timeoutId = setTimeout(() => {
+        // Center on the first node at zoom 0.7
+        const currentNodes = useWorkflowStore.getState().nodes;
+        const firstNode = currentNodes[0];
+        if (firstNode) {
+          const nodeWidth = (firstNode.style?.width as number) || 300;
+          const nodeHeight = (firstNode.style?.height as number) || 280;
+          const centerX = firstNode.position.x + nodeWidth / 2;
+          const centerY = firstNode.position.y + nodeHeight / 2;
+          // Use setCenter with explicit zoom to ensure 0.7 zoom level
+          setCenter(centerX, centerY, { duration: 500, zoom: 0.7 });
+        }
+      }, 600);
+
+      return () => clearTimeout(timeoutId);
+    }
+    // Reset the ref when tutorial ends
+    if (!tutorialActive) {
+      tutorialViewportSet.current = false;
+    }
+  }, [tutorialActive, nodes.length, setCenter]);
+
+  // Zoom out when demonstration step starts to show full workflow tree
+  useEffect(() => {
+    if (!tutorialActive) return;
+
+    const ftuxState = useFTUXStore.getState();
+    const currentStep = ftuxState.tutorialSteps[ftuxState.currentTutorialStep];
+
+    if (currentStep?.id === "demonstrate-downstream" && nodes.length > 0) {
+      // Zoom out immediately (not after delay) so users can see nodes being added
+      const generateNode = nodes.find((n) => n.type === "nanoBanana");
+      if (generateNode) {
+        // Center on the middle of the workflow tree with generous zoom
+        const centerX = generateNode.position.x + 700; // Center of the new wider layout
+        const centerY = generateNode.position.y;
+        setCenter(centerX, centerY, { duration: 800, zoom: 0.35 }); // Zoom to 0.35 for better overview
+      }
+    }
+  }, [tutorialActive, nodes, setCenter]);
 
   // Apply dimming className to nodes downstream of disabled Switch outputs or skipped by optional inputs
   const allNodes = useMemo(() => {
@@ -535,7 +614,7 @@ export function WorkflowCanvas() {
         if (!targetNode) return false;
 
         const targetNodeType = targetNode.type;
-        if (targetNodeType === "generateVideo" || targetNodeType === "videoStitch" || targetNodeType === "easeCurve" || targetNodeType === "videoTrim" || targetNodeType === "videoFrameGrab" || targetNodeType === "videoInput" || targetNodeType === "output" || targetNodeType === "router") {
+        if (targetNodeType === "generateVideo" || targetNodeType === "videoStitch" || targetNodeType === "easeCurve" || targetNodeType === "videoTrim" || targetNodeType === "videoFrameGrab" || targetNodeType === "videoInput" || targetNodeType === "output" || targetNodeType === "outputGallery" || targetNodeType === "router") {
           // For output node, we allow video even though its handle is typed as "image"
           // because output node can display both images and videos
           return true;
@@ -664,7 +743,12 @@ export function WorkflowCanvas() {
               }
             }
             if (resolved.targetHandle) batchUsed.add(resolved.targetHandle);
-            onConnect(resolved);
+            // Check for cycle and mark as loop edge if detected
+            if (wouldCreateCycle(resolved.source!, resolved.target!, edges)) {
+              onConnect(resolved, { isLoop: true, loopCount: 3 });
+            } else {
+              onConnect(resolved);
+            }
             return;
           }
 
@@ -705,7 +789,12 @@ export function WorkflowCanvas() {
           resolved = resolveSwitchHandle(resolved);
           if (resolved.targetHandle) batchUsed.add(resolved.targetHandle);
           if (isValidConnection(resolved)) {
-            onConnect(resolved);
+            // Check for cycle and mark as loop edge if detected
+            if (wouldCreateCycle(resolved.source!, resolved.target!, edges)) {
+              onConnect(resolved, { isLoop: true, loopCount: 3 });
+            } else {
+              onConnect(resolved);
+            }
           }
         });
       } else {
@@ -714,7 +803,12 @@ export function WorkflowCanvas() {
         resolved = resolveRouterHandle(resolved);
         resolved = resolveRouterSourceHandle(resolved);
         resolved = resolveSwitchHandle(resolved);
-        onConnect(resolved);
+        // Check for cycle and mark as loop edge if detected
+        if (wouldCreateCycle(resolved.source!, resolved.target!, edges)) {
+          onConnect(resolved, { isLoop: true, loopCount: 3 });
+        } else {
+          onConnect(resolved);
+        }
       }
     },
     [onConnect, nodes, edges]
@@ -913,8 +1007,13 @@ export function WorkflowCanvas() {
         sourceNodeId: connectionState.fromNode.id,
         sourceHandleId: fromHandleId,
       });
+
+      // Tutorial tracking
+      if (tutorialActive) {
+        useFTUXStore.getState().setConnectionMenuShown(true);
+      }
     },
-    [screenToFlowPosition, nodes, edges, handleConnect]
+    [screenToFlowPosition, nodes, edges, handleConnect, tutorialActive]
   );
 
   // Handle the splitGrid action - uses automated grid detection
@@ -1103,8 +1202,13 @@ export function WorkflowCanvas() {
       // Regular node creation
       const nodeType = selection.type as NodeType;
 
-      // Create the new node at the drop position
+      // Create the new node at the drop position (empty - tutorial will populate after connection)
       const newNodeId = addNode(nodeType, flowPosition);
+
+      // Tutorial tracking
+      if (tutorialActive && nodeType === "nanoBanana") {
+        useFTUXStore.getState().setNanoBananaAddedFromMenu(true);
+      }
 
       // If creating an annotation node from an image source, populate it with the source image
       if (nodeType === "annotation" && connectionType === "source" && handleType === "image" && sourceNodeId) {
@@ -1307,7 +1411,7 @@ export function WorkflowCanvas() {
 
       setConnectionDrop(null);
     },
-    [connectionDrop, addNode, onConnect, nodes, handleSplitGridAction, getImageFromNode, updateNodeData]
+    [connectionDrop, addNode, onConnect, nodes, handleSplitGridAction, getImageFromNode, updateNodeData, tutorialActive]
   );
 
   const handleCloseDropMenu = useCallback(() => {
@@ -2028,7 +2132,9 @@ export function WorkflowCanvas() {
             : "Shift"
         }
         panOnDrag={
-          isModalOpen
+          tutorialActive
+            ? false
+            : isModalOpen
             ? false
             : canvasNavigationSettings.panMode === "always"
             ? true
@@ -2039,13 +2145,15 @@ export function WorkflowCanvas() {
         selectNodesOnDrag={false}
         nodeDragThreshold={5}
         nodeClickDistance={5}
-        zoomOnScroll={false}
-        zoomOnPinch={!isModalOpen}
+        zoomOnScroll={tutorialActive ? false : false}
+        zoomOnPinch={tutorialActive ? false : !isModalOpen}
         minZoom={0.1}
         maxZoom={4}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         panActivationKeyCode={
-          isModalOpen
+          tutorialActive
+            ? null
+            : isModalOpen
             ? null
             : canvasNavigationSettings.panMode === "space"
             ? "Space"
@@ -2064,10 +2172,15 @@ export function WorkflowCanvas() {
         <SharedEdgeGradients />
         <GroupBackgroundsPortal />
         <GroupControlsOverlay />
-        <Background color="#404040" gap={20} size={1} />
-        <Controls className="bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg [&>button]:bg-neutral-800 [&>button]:border-neutral-700 [&>button]:fill-neutral-300 [&>button:hover]:bg-neutral-700 [&>button:hover]:fill-neutral-100" />
+        <Background
+          color="#404040"
+          gap={20}
+          size={1}
+          className={tutorialActive && lockedFeatures ? "opacity-30 pointer-events-none" : ""}
+        />
+        <Controls className={`bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg [&>button]:bg-neutral-800 [&>button]:border-neutral-700 [&>button]:fill-neutral-300 [&>button:hover]:bg-neutral-700 [&>button:hover]:fill-neutral-100 ${tutorialActive && lockedFeatures ? "opacity-30 pointer-events-none" : ""}`} />
         <MiniMap
-          className="bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg"
+          className={`bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg ${tutorialActive && lockedFeatures ? "opacity-30 pointer-events-none" : ""}`}
           maskColor="rgba(0, 0, 0, 0.6)"
           pannable
           zoomable
@@ -2165,6 +2278,52 @@ export function WorkflowCanvas() {
               </button>
             ) : undefined;
 
+            // Fallback shield button for generation nodes
+            const isGenerationNode =
+              node.type === "nanoBanana" ||
+              node.type === "generateVideo" ||
+              node.type === "generate3d" ||
+              node.type === "generateAudio" ||
+              node.type === "llmGenerate";
+            const fbData = node.data as any;
+            const hasFallback = !!fbData?.fallbackModel;
+            const fallbackName = fbData?.fallbackModel?.displayName;
+            const capabilityForNodeType = (t: string | undefined) => {
+              if (t === "nanoBanana") return "image" as const;
+              if (t === "generateVideo") return "video" as const;
+              if (t === "generate3d") return "3d" as const;
+              if (t === "generateAudio") return "audio" as const;
+              return null;
+            };
+            const fallbackButton = isGenerationNode ? (
+              <div className="relative shrink-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (node.type === "llmGenerate") {
+                      setLlmFallbackState({ nodeId: node.id });
+                    } else {
+                      const cap = capabilityForNodeType(node.type);
+                      if (cap) setFallbackDialogState({ nodeId: node.id, capability: cap });
+                    }
+                  }}
+                  className={`nodrag nopan p-0.5 rounded transition-colors border flex items-center ${
+                    hasFallback
+                      ? "text-blue-400 border-blue-600/60 hover:text-blue-200"
+                      : "text-neutral-500 border-neutral-600 hover:text-neutral-200"
+                  }`}
+                  title={hasFallback ? `Fallback: ${fallbackName}` : "Set fallback model (runs if primary fails)"}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0 1 16 0M12 4v8M8 12Q9 7 12 4M16 12Q15 7 12 4M4 12l8 8M20 12l-8 8M11 20h2" />
+                  </svg>
+                </button>
+                {hasFallback && (
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-blue-400 ring-1 ring-neutral-900 pointer-events-none" />
+                )}
+              </div>
+            ) : undefined;
+
             return (
               <FloatingNodeHeader
                 key={`header-${node.id}`}
@@ -2180,7 +2339,12 @@ export function WorkflowCanvas() {
                 customTitle={node.data?.customTitle}
                 comment={node.data?.comment}
                 provider={(node.data as any)?.selectedModel?.provider}
-                headerAction={browseAction}
+                headerAction={(browseAction || fallbackButton) ? (
+                  <>
+                    {browseAction}
+                    {fallbackButton}
+                  </>
+                ) : undefined}
                 headerButtons={optionalToggle}
                 onCustomTitleChange={handleCustomTitleChange}
                 onCommentChange={handleCommentChange}
@@ -2315,8 +2479,46 @@ export function WorkflowCanvas() {
         );
       })()}
 
+      {/* Fallback model picker dialog (image/video/audio/3d) */}
+      {fallbackDialogState && (
+        <ModelSearchDialog
+          isOpen
+          onClose={() => setFallbackDialogState(null)}
+          title="Select fallback model"
+          initialCapabilityFilter={fallbackDialogState.capability}
+          showClearOption
+          onClearSelection={() => {
+            updateNodeData(fallbackDialogState.nodeId, { fallbackModel: undefined, fallbackParameters: undefined });
+            setFallbackDialogState(null);
+          }}
+          onModelSelected={(model) => {
+            updateNodeData(fallbackDialogState.nodeId, {
+              fallbackModel: {
+                provider: model.provider,
+                modelId: model.id,
+                displayName: model.name,
+                capabilities: model.capabilities,
+              },
+              fallbackParameters: {},
+            });
+            setFallbackDialogState(null);
+          }}
+        />
+      )}
+
+      {/* LLM fallback popover */}
+      {llmFallbackState && (
+        <LLMFallbackPopover
+          nodeId={llmFallbackState.nodeId}
+          onClose={() => setLlmFallbackState(null)}
+        />
+      )}
+
       {/* AnnotationModal is globally managed by annotationStore */}
       <AnnotationModal />
+
+      {/* Tutorial overlay */}
+      <TutorialOverlay />
     </div>
   );
 }

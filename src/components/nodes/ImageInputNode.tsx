@@ -7,6 +7,9 @@ import { useCommentNavigation } from "@/hooks/useCommentNavigation";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { ImageInputNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
+import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type ImageInputNodeType = Node<ImageInputNodeData, "imageInput">;
 
@@ -16,6 +19,7 @@ export function ImageInputNode({ id, data, selected }: NodeProps<ImageInputNodeT
   const commentNavigation = useCommentNavigation(id);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const showLabels = useShowHandleLabels(selected);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,6 +116,15 @@ export function ImageInputNode({ id, data, selected }: NodeProps<ImageInputNodeT
             </span>
           )}
           <button
+            onClick={() => downloadMedia(nodeData.image!, "image")}
+            aria-label="Download image"
+            className="absolute top-2 right-10 w-6 h-6 bg-black/60 hover:bg-black/80 text-white rounded text-xs opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all flex items-center justify-center"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </button>
+          <button
             onClick={handleRemove}
             aria-label="Remove image"
             className="absolute top-2 right-2 w-6 h-6 bg-black/60 hover:bg-red-600/80 text-white rounded text-xs opacity-0 group-hover:opacity-100 focus:opacity-100 focus:ring-1 focus:ring-red-400 transition-all flex items-center justify-center"
@@ -150,14 +163,18 @@ export function ImageInputNode({ id, data, selected }: NodeProps<ImageInputNodeT
         position={Position.Left}
         id="reference"
         data-handletype="reference"
+        data-tutorial="node-input-handle"
         className="!bg-gray-500"
       />
+      <HandleLabel label="Ref" side="target" color="#6b7280" visible={showLabels} />
       <Handle
         type="source"
         position={Position.Right}
         id="image"
         data-handletype="image"
+        data-tutorial="node-output-handle"
       />
+      <HandleLabel label="Image" side="source" color="var(--handle-color-image)" visible={showLabels} />
     </BaseNode>
   );
 }

@@ -31,6 +31,7 @@ import { useToast } from "@/components/Toast";
 import { logger } from "@/utils/logger";
 import { externalizeWorkflowMedia, hydrateWorkflowMedia } from "@/utils/mediaStorage";
 import { EditOperation, applyEditOperations as executeEditOps } from "@/lib/chat/editOperations";
+import { findNearestFreePosition } from "@/utils/spatialLayout";
 import {
   loadSaveConfigs,
   saveSaveConfig,
@@ -59,6 +60,8 @@ import {
   groupNodesByLevel,
   chunk,
   clearNodeImageRefs,
+  findLoopSubgraph,
+  copyLoopOutput,
 } from "./utils/executionUtils";
 import { getConnectedInputsPure, validateWorkflowPure, type ConnectedInputs } from "./utils/connectedInputs";
 import { evaluateRule } from "./utils/ruleEvaluation";
@@ -235,6 +238,7 @@ interface WorkflowStore {
   addEdgeWithType: (connection: Connection, edgeType: string, edgeDataOverrides?: Record<string, unknown>) => void;
   removeEdge: (edgeId: string) => void;
   toggleEdgePause: (edgeId: string) => void;
+  setLoopCount: (edgeId: string, count: number) => void;
 
   // Copy/Paste operations
   copySelectedNodes: () => void;
@@ -272,6 +276,7 @@ interface WorkflowStore {
   regenerateNode: (nodeId: string) => Promise<void>;
   executeSelectedNodes: (nodeIds: string[]) => Promise<void>;
   stopWorkflow: () => void;
+  mockTutorialExecution: () => Promise<void>;
   setMaxConcurrentCalls: (value: number) => void;
 
   // Save/Load
@@ -669,6 +674,10 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
 
     const { width, height } = defaultNodeDimensions[type];
 
+    // Find collision-free position
+    const state = get();
+    const finalPosition = findNearestFreePosition(position, type, state.nodes);
+
     // Merge default data with initialData if provided
     const defaultData = createDefaultNodeData(type);
     const nodeData = initialData
@@ -678,7 +687,7 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
     const newNode: WorkflowNode = {
       id,
       type,
-      position,
+      position: finalPosition,
       data: nodeData,
       style: { width, height },
     };
@@ -887,6 +896,19 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       edges: state.edges.map((edge) =>
         edge.id === edgeId
           ? { ...edge, data: { ...edge.data, hasPause: !edge.data?.hasPause } }
+          : edge
+      ),
+      hasUnsavedChanges: true,
+    }));
+  },
+
+  setLoopCount: (edgeId: string, count: number) => {
+    const clamped = Math.max(1, Math.min(100, count));
+    pushUndoCheckpoint(get, set);
+    set((state) => ({
+      edges: state.edges.map((edge) =>
+        edge.id === edgeId
+          ? { ...edge, data: { ...edge.data, loopCount: clamped } }
           : edge
       ),
       hasUnsavedChanges: true,
@@ -1220,16 +1242,6 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       maxConcurrentCalls,
     });
 
-    // Group nodes by level for parallel execution
-    const levels = groupNodesByLevel(nodes, edges);
-
-    // Find starting level if startFromNodeId specified
-    let startLevel = 0;
-    if (startFromNodeId) {
-      const foundLevel = levels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
-      if (foundLevel !== -1) startLevel = foundLevel;
-    }
-
     // Helper to execute a single node - returns true if successful, throws on error
     const executeSingleNode = async (node: WorkflowNode, signal: AbortSignal): Promise<void> => {
       // Check for abort before starting
@@ -1410,26 +1422,28 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         }
     }; // End of executeSingleNode helper
 
-    try {
-      // Execute levels sequentially, but nodes within each level in parallel
+    // Helper to execute a set of levels sequentially, with parallel batches within each level
+    const executeLevels = async (
+      levels: ReturnType<typeof groupNodesByLevel>,
+      startLevel: number = 0
+    ): Promise<void> => {
       for (let levelIdx = startLevel; levelIdx < levels.length; levelIdx++) {
-        // Check if execution was stopped
         if (abortController.signal.aborted || !get().isRunning) break;
 
         const level = levels[levelIdx];
+        // Get fresh node references from the store for each level
+        const currentNodes = get().nodes;
         const levelNodes = level.nodeIds
-          .map((id) => nodes.find((n) => n.id === id))
+          .map((id) => currentNodes.find((n) => n.id === id))
           .filter((n): n is WorkflowNode => n !== undefined);
 
         if (levelNodes.length === 0) continue;
 
-        // Execute nodes in batches respecting concurrency limit
         const batches = chunk(levelNodes, maxConcurrentCalls);
 
         for (const batch of batches) {
           if (abortController.signal.aborted || !get().isRunning) break;
 
-          // Update currentNodeIds to show which nodes are executing
           const batchIds = batch.map((n) => n.id);
           set({ currentNodeIds: batchIds });
 
@@ -1439,12 +1453,10 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
             nodeIds: batchIds,
           });
 
-          // Execute batch in parallel
           const results = await Promise.allSettled(
             batch.map((node) => executeSingleNode(node, abortController.signal))
           );
 
-          // Check for failures with node context (fail-fast behavior)
           for (let i = 0; i < results.length; i++) {
             const r = results[i];
             if (r.status === 'rejected' &&
@@ -1460,6 +1472,119 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
               throw r.reason;
             }
           }
+        }
+      }
+    };
+
+    try {
+      // Partition edges into loop and forward edges
+      const loopEdges = edges.filter(e => e.data?.isLoop);
+      const forwardEdges = edges.filter(e => !e.data?.isLoop);
+
+      // Group nodes by level using ONLY forward edges (loop edges excluded from topological sort)
+      const levels = groupNodesByLevel(nodes, forwardEdges);
+
+      // Find starting level if startFromNodeId specified
+      let startLevel = 0;
+      if (startFromNodeId) {
+        const foundLevel = levels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
+        if (foundLevel !== -1) startLevel = foundLevel;
+      }
+
+      if (loopEdges.length === 0) {
+        // No loops — existing execution path
+        await executeLevels(levels, startLevel);
+      } else {
+        // Warn if multiple loop edges (single loop supported in Phase 48)
+        if (loopEdges.length > 1) {
+          useToast.getState().show("Multiple loop edges detected — only the first loop will execute", "warning");
+        }
+
+        const loopEdge = loopEdges[0];
+        const loopBodyIds = new Set(findLoopSubgraph(loopEdge.source, loopEdge.target, forwardEdges));
+
+        // Expand loop body to include downstream nodes that depend on loop output.
+        // These nodes (e.g. outputGallery connected to a looped generateVideo) should
+        // execute each iteration so they can collect results from every pass.
+        const loopIterationIds = new Set(loopBodyIds);
+        let expanded = true;
+        while (expanded) {
+          expanded = false;
+          for (const edge of forwardEdges) {
+            if (loopIterationIds.has(edge.source) && !loopIterationIds.has(edge.target)) {
+              loopIterationIds.add(edge.target);
+              expanded = true;
+            }
+          }
+        }
+
+        // Partition levels: iterating nodes run each loop pass, non-iterating run once as prefix
+        const prefixLevels: typeof levels = [];
+        const loopLevels: typeof levels = [];
+
+        for (const level of levels) {
+          const iteratingIds = level.nodeIds.filter(id => loopIterationIds.has(id));
+          const nonIteratingIds = level.nodeIds.filter(id => !loopIterationIds.has(id));
+
+          if (iteratingIds.length > 0) {
+            loopLevels.push({ level: level.level, nodeIds: iteratingIds });
+          }
+          if (nonIteratingIds.length > 0) {
+            prefixLevels.push({ level: level.level, nodeIds: nonIteratingIds });
+          }
+        }
+
+        // Remap startLevel to prefixLevels and loopLevels indices
+        let prefixStartLevel = 0;
+        let loopStartLevel = -1;
+        if (startFromNodeId) {
+          const prefixIdx = prefixLevels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
+          const loopIdx = loopLevels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
+
+          if (prefixIdx !== -1) {
+            prefixStartLevel = prefixIdx;
+          } else if (loopIdx !== -1) {
+            // Resume target is inside loop - start from that level on first iteration
+            loopStartLevel = loopIdx;
+          }
+        }
+
+        // Execute prefix once
+        logger.info('node.execution', 'Executing prefix levels', { count: prefixLevels.length });
+        await executeLevels(prefixLevels, prefixStartLevel);
+
+        // Execute loop N times
+        // Normalize and clamp loopCount to handle malformed/imported values
+        const rawLoopCount = loopEdge.data?.loopCount ?? 3;
+        const parsed = Number(rawLoopCount);
+        const loopCount = Number.isFinite(parsed) && !isNaN(parsed)
+          ? Math.max(1, Math.min(100, parsed))
+          : 3;
+        for (let i = 0; i < loopCount; i++) {
+          if (abortController.signal.aborted || !get().isRunning) break;
+
+          // Copy output → input between iterations (skip first — uses original input)
+          if (i > 0) {
+            const freshNodes = get().nodes;
+            const sourceNode = freshNodes.find(n => n.id === loopEdge.source);
+            const targetNode = freshNodes.find(n => n.id === loopEdge.target);
+            if (sourceNode && targetNode) {
+              copyLoopOutput(
+                sourceNode,
+                loopEdge.sourceHandle ?? null,
+                targetNode,
+                loopEdge.targetHandle ?? null,
+                get().updateNodeData
+              );
+            }
+          }
+
+          logger.info('node.execution', `Loop iteration ${i + 1}/${loopCount}`);
+
+          // Execute loop body + downstream levels with fresh node state
+          // On first iteration, use loopStartLevel if resuming from a node inside the loop
+          const startLevel = i === 0 && loopStartLevel !== -1 ? loopStartLevel : 0;
+          await executeLevels(loopLevels, startLevel);
         }
       }
 
@@ -1503,6 +1628,89 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       controller.abort("user-cancelled");
     }
     set({ isRunning: false, currentNodeIds: [], skippedNodeIds: new Set(), _abortController: null });
+  },
+
+  mockTutorialExecution: async () => {
+    const { nodes, updateNodeData } = get();
+
+    // Find the Generate Image node
+    const nanoBananaNode = nodes.find((n) => n.type === "nanoBanana");
+    if (!nanoBananaNode) return;
+
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    // Set execution state
+    set({
+      isRunning: true,
+      currentNodeIds: [nanoBananaNode.id],
+      _abortController: controller,
+    });
+
+    // Set loading state (triggers edge animations)
+    updateNodeData(nanoBananaNode.id, {
+      status: "loading",
+      error: null,
+    });
+
+    // Cancellable 5-second delay
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, 5000);
+        signal.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
+      });
+    } catch {
+      // Aborted during wait — clean up and exit
+      updateNodeData(nanoBananaNode.id, { status: "idle", error: null });
+      set({ isRunning: false, currentNodeIds: [], _abortController: null });
+      return;
+    }
+
+    // Load the mock output image
+    const mockImageUrl = "/tutorial/owl-aviator.png";
+    try {
+      const response = await fetch(mockImageUrl, { signal });
+      if (!response.ok) throw new Error(`Failed to fetch tutorial image: ${response.status}`);
+      const blob = await response.blob();
+      const reader = new FileReader();
+
+      const base64Image = await new Promise<string>((resolve, reject) => {
+        signal.addEventListener("abort", () => {
+          reader.abort();
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+
+      // Set output (completes the tutorial step)
+      updateNodeData(nanoBananaNode.id, {
+        status: "complete",
+        outputImage: base64Image,
+        imageHistory: [{ image: base64Image, timestamp: Date.now() }],
+        selectedHistoryIndex: 0,
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        updateNodeData(nanoBananaNode.id, { status: "idle", error: null });
+      } else {
+        updateNodeData(nanoBananaNode.id, {
+          status: "error",
+          error: "Failed to load tutorial image",
+        });
+      }
+    }
+
+    // Clear execution state
+    set({
+      isRunning: false,
+      currentNodeIds: [],
+      _abortController: null,
+    });
   },
 
   setMaxConcurrentCalls: (value: number) => {
@@ -1976,6 +2184,12 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
     if (edgeById.size < workflow.edges.length) {
       workflow.edges = Array.from(edgeById.values());
     }
+
+    // Filter orphaned edges referencing non-existent nodes
+    const nodeIds = new Set(workflow.nodes.map((n) => n.id));
+    workflow.edges = workflow.edges.filter(
+      (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    );
 
     // Look up saved config from localStorage (only if workflow has an ID)
     const configs = loadSaveConfigs();

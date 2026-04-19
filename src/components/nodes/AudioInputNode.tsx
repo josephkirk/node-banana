@@ -7,6 +7,9 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { AudioInputNodeData } from "@/types";
 import { useAudioVisualization } from "@/hooks/useAudioVisualization";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
+import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type AudioInputNodeType = Node<AudioInputNodeData, "audioInput">;
 
@@ -14,6 +17,7 @@ export function AudioInputNode({ id, data, selected }: NodeProps<AudioInputNodeT
   const nodeData = data;
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const showLabels = useShowHandleLabels(selected);
 
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
@@ -213,6 +217,17 @@ export function AudioInputNode({ id, data, selected }: NodeProps<AudioInputNodeT
             </span>
           </div>
 
+          {/* Download button */}
+          <button
+            onClick={() => downloadMedia(nodeData.audioFile!, "audio")}
+            aria-label="Download audio"
+            className="absolute top-1 right-7 w-5 h-5 bg-black/60 hover:bg-black/80 text-white rounded text-xs opacity-0 group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-white transition-opacity flex items-center justify-center"
+            title="Download audio"
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+          </button>
           {/* Remove button */}
           <button
             onClick={handleRemove}
@@ -250,6 +265,7 @@ export function AudioInputNode({ id, data, selected }: NodeProps<AudioInputNodeT
         data-handletype="audio"
         style={{ background: "rgb(167, 139, 250)" }}
       />
+      <HandleLabel label="Audio" side="target" color="var(--handle-color-audio)" visible={showLabels} />
       <Handle
         type="source"
         position={Position.Right}
@@ -257,6 +273,7 @@ export function AudioInputNode({ id, data, selected }: NodeProps<AudioInputNodeT
         data-handletype="audio"
         style={{ background: "rgb(167, 139, 250)" }}
       />
+      <HandleLabel label="Audio" side="source" color="var(--handle-color-audio)" visible={showLabels} />
     </BaseNode>
   );
 }

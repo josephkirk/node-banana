@@ -439,6 +439,7 @@ describe("OutputNode", () => {
     it("should fetch and download for URL-based content", async () => {
       const mockBlob = new Blob(["test"], { type: "image/png" });
       const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
         blob: () => Promise.resolve(mockBlob),
       });
       global.fetch = mockFetch;
@@ -501,6 +502,7 @@ describe("OutputNode", () => {
     it("should revoke blob URL after download for HTTP content", async () => {
       const mockBlob = new Blob(["test"], { type: "image/png" });
       global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
         blob: () => Promise.resolve(mockBlob),
       });
 

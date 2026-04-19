@@ -14,8 +14,12 @@ import { getImageDimensions, calculateNodeSizePreservingHeight } from "@/utils/n
 import { ProviderBadge } from "./ProviderBadge";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
+import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
+import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 /** Reorder items so they read column-first in a row-based CSS grid.
  *  e.g. [1,2,3,4,5,6,7,8] with 2 cols → [1,5,2,6,3,7,4,8] */
@@ -65,9 +69,17 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [modelsFetchError, setModelsFetchError] = useState<string | null>(null);
   const [isBrowseDialogOpen, setIsBrowseDialogOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"primary" | "fallback">("primary");
+
+  useEffect(() => {
+    if (!nodeData.fallbackModel && settingsTab === "fallback") {
+      setSettingsTab("primary");
+    }
+  }, [nodeData.fallbackModel, settingsTab]);
 
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
+  const showLabels = useShowHandleLabels(selected);
 
   // Register browse callback for floating header button
   useEffect(() => {
@@ -506,117 +518,144 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
       fullBleed
       settingsExpanded={inlineParametersEnabled && isParamsExpanded}
       aspectFitMedia={nodeData.outputImage}
+      dataTutorial="generate-image-node"
       settingsPanel={inlineParametersEnabled ? (
         <InlineParameterPanel
           expanded={isParamsExpanded}
           onToggle={handleToggleParams}
           nodeId={id}
         >
-          {/* Gemini-specific controls */}
-          {isGeminiProvider && currentModelId && (() => {
-            const controls: React.ReactNode[] = [
-              <div key="model" className="flex items-center gap-2">
-                <label className="text-[11px] text-neutral-400 shrink-0">Model</label>
-                <select
-                  value={currentModelId}
-                  onChange={handleModelChange}
-                  className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
-                >
-                  {GEMINI_IMAGE_MODELS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
-              </div>,
-              <div key="aspect-ratio" className="flex items-center gap-2">
-                <label className="text-[11px] text-neutral-400 shrink-0">Aspect Ratio</label>
-                <select
-                  value={nodeData.aspectRatio || "1:1"}
-                  onChange={handleAspectRatioChange}
-                  className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
-                >
-                  {aspectRatios.map((ratio) => (
-                    <option key={ratio} value={ratio}>
-                      {ratio}
-                    </option>
-                  ))}
-                </select>
-              </div>,
-            ];
+          {/* Tab bar for primary/fallback settings */}
+          {nodeData.fallbackModel && (
+            <SettingsTabBar
+              activeTab={settingsTab}
+              onTabChange={setSettingsTab}
+              primaryLabel={nodeData.selectedModel?.displayName || "Primary"}
+              fallbackLabel={nodeData.fallbackModel.displayName}
+            />
+          )}
 
-            if (supportsResolution) {
-              controls.push(
-                <div key="resolution" className="flex items-center gap-2">
-                  <label className="text-[11px] text-neutral-400 shrink-0">Resolution</label>
-                  <select
-                    value={nodeData.resolution || "2K"}
-                    onChange={handleResolutionChange}
-                    className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
-                  >
-                    {resolutions.map((res) => (
-                      <option key={res} value={res}>
-                        {res}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              );
-            }
+          {/* Primary tab content */}
+          {settingsTab === "primary" && (
+            <>
+              {/* Gemini-specific controls */}
+              {isGeminiProvider && currentModelId && (() => {
+                const controls: React.ReactNode[] = [
+                  <div key="model" className="flex items-center gap-2">
+                    <label className="text-[11px] text-neutral-400 shrink-0">Model</label>
+                    <select
+                      value={currentModelId}
+                      onChange={handleModelChange}
+                      data-tutorial="generate-model-selector"
+                      className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
+                    >
+                      {GEMINI_IMAGE_MODELS.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>,
+                  <div key="aspect-ratio" className="flex items-center gap-2">
+                    <label className="text-[11px] text-neutral-400 shrink-0">Aspect Ratio</label>
+                    <select
+                      value={nodeData.aspectRatio || "1:1"}
+                      onChange={handleAspectRatioChange}
+                      className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
+                    >
+                      {aspectRatios.map((ratio) => (
+                        <option key={ratio} value={ratio}>
+                          {ratio}
+                        </option>
+                      ))}
+                    </select>
+                  </div>,
+                ];
 
-            if (currentModelId === "nano-banana-pro" || currentModelId === "nano-banana-2") {
-              controls.push(
-                <label key="google-search" className="flex items-center gap-1.5 text-[11px] text-neutral-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={nodeData.useGoogleSearch || false}
-                    onChange={handleGoogleSearchToggle}
-                    className="nodrag nopan w-3 h-3 rounded bg-[#1a1a1a] text-neutral-600 focus:ring-1 focus:ring-neutral-600 focus:ring-offset-0"
-                  />
-                  Google Search
-                </label>
-              );
-            }
-
-            if (currentModelId === "nano-banana-2") {
-              controls.push(
-                <label key="image-search" className="flex items-center gap-1.5 text-[11px] text-neutral-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={nodeData.useImageSearch || false}
-                    onChange={handleImageSearchToggle}
-                    className="nodrag nopan w-3 h-3 rounded bg-[#1a1a1a] text-neutral-600 focus:ring-1 focus:ring-neutral-600 focus:ring-offset-0"
-                  />
-                  Image Search
-                </label>
-              );
-            }
-
-            const display = useGeminiGrid && geminiColCount > 1
-              ? reorderColumnFirst(controls, geminiColCount)
-              : controls;
-
-            return (
-              <div
-                ref={geminiGridRef}
-                className={useGeminiGrid
-                  ? "grid grid-cols-[repeat(auto-fill,minmax(min(180px,100%),1fr))] max-w-[420px] gap-x-6 gap-y-1.5"
-                  : "space-y-1.5 max-w-[280px]"
+                if (supportsResolution) {
+                  controls.push(
+                    <div key="resolution" className="flex items-center gap-2">
+                      <label className="text-[11px] text-neutral-400 shrink-0">Resolution</label>
+                      <select
+                        value={nodeData.resolution || "2K"}
+                        onChange={handleResolutionChange}
+                        className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
+                      >
+                        {resolutions.map((res) => (
+                          <option key={res} value={res}>
+                            {res}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
                 }
-              >
-                {display}
-              </div>
-            );
-          })()}
 
-          {/* External provider parameters - reuse ModelParameters component */}
-          {!isGeminiProvider && nodeData.selectedModel?.modelId && (
+                if (currentModelId === "nano-banana-pro" || currentModelId === "nano-banana-2") {
+                  controls.push(
+                    <label key="google-search" className="flex items-center gap-1.5 text-[11px] text-neutral-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={nodeData.useGoogleSearch || false}
+                        onChange={handleGoogleSearchToggle}
+                        className="nodrag nopan w-3 h-3 rounded bg-[#1a1a1a] text-neutral-600 focus:ring-1 focus:ring-neutral-600 focus:ring-offset-0"
+                      />
+                      Google Search
+                    </label>
+                  );
+                }
+
+                if (currentModelId === "nano-banana-2") {
+                  controls.push(
+                    <label key="image-search" className="flex items-center gap-1.5 text-[11px] text-neutral-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={nodeData.useImageSearch || false}
+                        onChange={handleImageSearchToggle}
+                        className="nodrag nopan w-3 h-3 rounded bg-[#1a1a1a] text-neutral-600 focus:ring-1 focus:ring-neutral-600 focus:ring-offset-0"
+                      />
+                      Image Search
+                    </label>
+                  );
+                }
+
+                const display = useGeminiGrid && geminiColCount > 1
+                  ? reorderColumnFirst(controls, geminiColCount)
+                  : controls;
+
+                return (
+                  <div
+                    ref={geminiGridRef}
+                    className={useGeminiGrid
+                      ? "grid grid-cols-[repeat(auto-fill,minmax(min(180px,100%),1fr))] max-w-[420px] gap-x-6 gap-y-1.5"
+                      : "space-y-1.5 max-w-[280px]"
+                    }
+                  >
+                    {display}
+                  </div>
+                );
+              })()}
+
+              {/* External provider parameters - reuse ModelParameters component */}
+              {!isGeminiProvider && nodeData.selectedModel?.modelId && (
+                <ModelParameters
+                  modelId={nodeData.selectedModel.modelId}
+                  provider={currentProvider}
+                  parameters={nodeData.parameters || {}}
+                  onParametersChange={handleParametersChange}
+                  onInputsLoaded={handleInputsLoaded}
+                />
+              )}
+            </>
+          )}
+
+          {/* Fallback tab content */}
+          {settingsTab === "fallback" && nodeData.fallbackModel && (
             <ModelParameters
-              modelId={nodeData.selectedModel.modelId}
-              provider={currentProvider}
-              parameters={nodeData.parameters || {}}
-              onParametersChange={handleParametersChange}
-              onInputsLoaded={handleInputsLoaded}
+              modelId={nodeData.fallbackModel.modelId}
+              provider={nodeData.fallbackModel.provider}
+              parameters={nodeData.fallbackParameters || {}}
+              onParametersChange={(p) => updateNodeData(id, { fallbackParameters: p })}
             />
           )}
         </InlineParameterPanel>
@@ -633,37 +672,18 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
         isConnectable={true}
       />
       {/* Image label */}
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{
-          right: `calc(100% + 8px)`,
-          top: "calc(35% - 18px)",
-          color: "var(--handle-color-image)",
-          zIndex: 10,
-        }}
-      >
-        Image
-      </div>
+      <HandleLabel label="Image" side="target" color="var(--handle-color-image)" top="calc(35% - 18px)" visible={showLabels} />
       <Handle
         type="target"
         position={Position.Left}
         id="text"
         style={{ top: "65%", zIndex: 10 }}
         data-handletype="text"
+        data-tutorial="generate-text-input-handle"
         isConnectable={true}
       />
       {/* Prompt label */}
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{
-          right: `calc(100% + 8px)`,
-          top: "calc(65% - 18px)",
-          color: "var(--handle-color-text)",
-          zIndex: 10,
-        }}
-      >
-        Prompt
-      </div>
+      <HandleLabel label="Prompt" side="target" color="var(--handle-color-text)" top="calc(65% - 18px)" visible={showLabels} />
       {/* Output handle */}
       <Handle
         type="source"
@@ -673,19 +693,12 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
         data-handletype="image"
       />
       {/* Output label */}
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{
-          left: `calc(100% + 8px)`,
-          top: "calc(50% - 18px)",
-          color: "var(--handle-color-image)",
-          zIndex: 10,
-        }}
-      >
-        Image
-      </div>
+      <HandleLabel label="Image" side="source" color="var(--handle-color-image)" visible={showLabels} />
 
-      <div className="relative w-full h-full min-h-0 overflow-hidden rounded-lg">
+      <div
+        className="relative w-full h-full min-h-0 overflow-hidden rounded-lg"
+        data-tutorial="generate-output-area"
+      >
         {/* Preview area */}
         {nodeData.outputImage ? (
           <>
@@ -694,6 +707,14 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
               alt="Generated"
               className="w-full h-full object-cover"
             />
+            {nodeData.__usedFallback && (
+              <div
+                className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 text-[9px] font-medium pointer-events-auto z-10"
+                title={`Primary failed: ${nodeData.__primaryError ?? "unknown"}\nUsed fallback: ${nodeData.__fallbackModelUsed ?? ""}`}
+              >
+                Fallback used
+              </div>
+            )}
             {/* Loading overlay for generation */}
             {nodeData.status === "loading" && (
               <div className="absolute inset-0 bg-neutral-900/70 flex items-center justify-center">
@@ -758,8 +779,17 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
                 </svg>
               </div>
             )}
-            {/* Clear button */}
-            <div className="absolute top-1 right-1">
+            {/* Download + Clear buttons */}
+            <div className="absolute top-1 right-1 flex items-center gap-0.5">
+              <button
+                onClick={() => downloadMedia(nodeData.outputImage!, "image").catch(() => {})}
+                className="w-5 h-5 bg-neutral-900/80 hover:bg-neutral-700 rounded flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
+                title="Download image"
+              >
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+              </button>
               <button
                 onClick={handleClearImage}
                 className="w-5 h-5 bg-neutral-900/80 hover:bg-red-600/80 rounded flex items-center justify-center text-neutral-400 hover:text-white transition-colors"

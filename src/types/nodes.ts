@@ -195,6 +195,7 @@ export interface NanoBananaNodeData extends BaseNodeData {
   useGoogleSearch: boolean; // Only available for Nano Banana Pro and Nano Banana 2
   useImageSearch: boolean; // Only available for Nano Banana 2
   parameters?: Record<string, unknown>; // Model-specific parameters for external providers
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model
   inputSchema?: ModelInputDef[]; // Model's input schema for dynamic handles
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
@@ -202,6 +203,10 @@ export interface NanoBananaNodeData extends BaseNodeData {
   error: string | null;
   imageHistory: CarouselImageItem[]; // Carousel history (IDs only)
   selectedHistoryIndex: number; // Currently selected image in carousel
+  fallbackModel?: SelectedModel; // JSON-compatible with Node Banana Pro
+  __usedFallback?: boolean; // Set by runWithFallback on successful fallback
+  __fallbackModelUsed?: string; // Display name of fallback model that succeeded
+  __primaryError?: string; // Error message from the primary attempt
 }
 
 /**
@@ -215,6 +220,7 @@ export interface GenerateVideoNodeData extends BaseNodeData {
   outputVideoRef?: string; // External video reference for storage optimization
   selectedModel?: SelectedModel; // Required for video generation (no legacy fallback)
   parameters?: Record<string, unknown>; // Model-specific parameters
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model
   inputSchema?: ModelInputDef[]; // Model's input schema for dynamic handles
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
@@ -222,6 +228,10 @@ export interface GenerateVideoNodeData extends BaseNodeData {
   error: string | null;
   videoHistory: CarouselVideoItem[]; // Carousel history (IDs only)
   selectedVideoHistoryIndex: number; // Currently selected video in carousel
+  fallbackModel?: SelectedModel; // JSON-compatible with Node Banana Pro
+  __usedFallback?: boolean; // Set by runWithFallback on successful fallback
+  __fallbackModelUsed?: string; // Display name of fallback model that succeeded
+  __primaryError?: string; // Error message from the primary attempt
 }
 
 /**
@@ -236,11 +246,16 @@ export interface Generate3DNodeData extends BaseNodeData {
   savedFilePath: string | null;
   selectedModel?: SelectedModel;
   parameters?: Record<string, unknown>;
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model
   inputSchema?: ModelInputDef[];
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
   status: NodeStatus;
   error: string | null;
+  fallbackModel?: SelectedModel; // JSON-compatible with Node Banana Pro
+  __usedFallback?: boolean; // Set by runWithFallback on successful fallback
+  __fallbackModelUsed?: string; // Display name of fallback model that succeeded
+  __primaryError?: string; // Error message from the primary attempt
 }
 
 /**
@@ -262,6 +277,7 @@ export interface GenerateAudioNodeData extends BaseNodeData {
   outputAudioRef?: string; // External audio reference for storage optimization
   selectedModel?: SelectedModel; // Required for audio generation
   parameters?: Record<string, unknown>; // Model-specific parameters (voice, speed, etc.)
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model
   inputSchema?: ModelInputDef[]; // Model's input schema for dynamic handles
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
@@ -271,6 +287,10 @@ export interface GenerateAudioNodeData extends BaseNodeData {
   selectedAudioHistoryIndex: number; // Currently selected audio in carousel
   duration: number | null; // Duration in seconds
   format: string | null; // MIME type (audio/mp3, audio/wav, etc.)
+  fallbackModel?: SelectedModel; // JSON-compatible with Node Banana Pro
+  __usedFallback?: boolean; // Set by runWithFallback on successful fallback
+  __fallbackModelUsed?: string; // Display name of fallback model that succeeded
+  __primaryError?: string; // Error message from the primary attempt
 }
 
 /**
@@ -285,10 +305,15 @@ export interface LLMGenerateNodeData extends BaseNodeData {
   model: LLMModelType;
   temperature: number;
   maxTokens: number;
+  fallbackParameters?: Record<string, unknown>; // Parameters for fallback model (temperature, maxTokens)
   parametersExpanded?: boolean; // Collapse state for inline parameter display
   _settingsPanelHeight?: number; // Measured settings panel height for reload correction
   status: NodeStatus;
   error: string | null;
+  fallbackModel?: SelectedModel; // JSON-compatible with Node Banana Pro
+  __usedFallback?: boolean; // Set by runWithFallback on successful fallback
+  __fallbackModelUsed?: string; // Display name of fallback model that succeeded
+  __primaryError?: string; // Error message from the primary attempt
 }
 
 /**
@@ -308,6 +333,9 @@ export interface OutputNodeData extends BaseNodeData {
  */
 export interface OutputGalleryNodeData extends BaseNodeData {
   images: string[]; // Array of base64 data URLs from connected nodes
+  imageRefs?: string[]; // External storage refs for images
+  videos?: string[]; // Array of video URLs from connected nodes
+  videoRefs?: string[]; // External storage refs for videos
 }
 
 /**

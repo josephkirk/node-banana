@@ -290,21 +290,34 @@ export async function executeOutput(ctx: NodeExecutionContext): Promise<void> {
 }
 
 /**
- * OutputGallery node: accumulates images from upstream nodes.
+ * OutputGallery node: accumulates images and videos from upstream nodes.
  */
 export async function executeOutputGallery(ctx: NodeExecutionContext): Promise<void> {
   const { node, getConnectedInputs, updateNodeData, getFreshNode } = ctx;
-  const { images } = getConnectedInputs(node.id);
+  const { images, videos } = getConnectedInputs(node.id);
   // Use fresh node data — the stale `node` from topological sort may be missing
   // images pushed by appendOutputGalleryImage during upstream batch execution.
   const freshNode = getFreshNode(node.id);
-  const galleryImages = ((freshNode?.data ?? node.data) as OutputGalleryNodeData).images || [];
-  const existing = new Set(galleryImages);
-  const newImages = images.filter((img) => !existing.has(img));
+  const freshData = (freshNode?.data ?? node.data) as OutputGalleryNodeData;
+  const galleryImages = freshData.images || [];
+  const galleryVideos = freshData.videos || [];
+
+  const updates: Partial<OutputGalleryNodeData> = {};
+
+  const existingImages = new Set(galleryImages);
+  const newImages = images.filter((img) => !existingImages.has(img));
   if (newImages.length > 0) {
-    updateNodeData(node.id, {
-      images: [...newImages, ...galleryImages],
-    });
+    updates.images = [...newImages, ...galleryImages];
+  }
+
+  const existingVideos = new Set(galleryVideos);
+  const newVideos = videos.filter((v) => !existingVideos.has(v));
+  if (newVideos.length > 0) {
+    updates.videos = [...newVideos, ...galleryVideos];
+  }
+
+  if (Object.keys(updates).length > 0) {
+    updateNodeData(node.id, updates);
   }
 }
 

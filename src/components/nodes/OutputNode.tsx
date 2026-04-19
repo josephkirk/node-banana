@@ -9,6 +9,9 @@ import { OutputNodeData } from "@/types";
 import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
+import { downloadMedia, MediaType } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
+import { HandleLabel } from "./HandleLabel";
 
 type OutputNodeType = Node<OutputNodeData, "output">;
 
@@ -21,6 +24,7 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
     (state) => state.edges.filter((edge) => edge.target === id).length
   );
   const isRunning = useWorkflowStore((state) => state.isRunning);
+  const showLabels = useShowHandleLabels(selected);
   const [showLightbox, setShowLightbox] = useState(false);
   const previousEdgeCountRef = useRef<number | null>(null);
   const videoAutoplayRef = useVideoAutoplay(id, selected);
@@ -74,41 +78,12 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
 
   const handleDownload = useCallback(async () => {
     if (!contentSrc) return;
-
-    const timestamp = Date.now();
-    const extension = isAudio ? "mp3" : isVideo ? "mp4" : "png";
-    // Use custom filename if provided, otherwise use timestamp
-    const filename = nodeData.outputFilename
-      ? `${nodeData.outputFilename}.${extension}`
-      : `generated-${timestamp}.${extension}`;
-
-    // Handle URL-based content (needs fetch + blob conversion)
-    if (contentSrc.startsWith("http://") || contentSrc.startsWith("https://")) {
-      try {
-        const response = await fetch(contentSrc);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = blobUrl;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(blobUrl);
-      } catch (error) {
-        console.error("Failed to download:", error);
-      }
-      return;
+    const type: MediaType = isAudio ? "audio" : isVideo ? "video" : "image";
+    try {
+      await downloadMedia(contentSrc, type, nodeData.outputFilename ?? undefined);
+    } catch (err) {
+      console.error("Download failed:", err);
     }
-
-    // Handle data URL content (direct download)
-    const link = document.createElement("a");
-    link.href = contentSrc;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   }, [contentSrc, isAudio, isVideo, nodeData.outputFilename]);
 
   return (
@@ -126,15 +101,25 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
           position={Position.Left}
           id="image"
           data-handletype="image"
-          style={{ zIndex: 10 }}
+          style={{ top: "35%", zIndex: 10 }}
         />
+        <HandleLabel label="Image" side="target" color="var(--handle-color-image)" top="calc(35% - 18px)" visible={showLabels} />
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="video"
+          data-handletype="video"
+          style={{ top: "50%", zIndex: 10 }}
+        />
+        <HandleLabel label="Video" side="target" color="var(--handle-color-video)" visible={showLabels} />
         <Handle
           type="target"
           position={Position.Left}
           id="audio"
           data-handletype="audio"
-          style={{ top: "60%", background: "rgb(167, 139, 250)", zIndex: 10 }}
+          style={{ top: "65%", background: "rgb(167, 139, 250)", zIndex: 10 }}
         />
+        <HandleLabel label="Audio" side="target" color="var(--handle-color-audio)" top="calc(65% - 18px)" visible={showLabels} />
 
         <div className="relative w-full h-full overflow-hidden rounded-lg">
         {contentSrc ? (

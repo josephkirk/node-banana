@@ -53,7 +53,7 @@ export const defaultNodeDimensions: Record<NodeType, { width: number; height: nu
   outputGallery: { width: 320, height: 360 },
   imageCompare: { width: 400, height: 360 },
   videoStitch: { width: 400, height: 280 },
-  easeCurve: { width: 340, height: 480 },
+  easeCurve: { width: 340, height: 280 },
   videoTrim: { width: 360, height: 360 },
   videoFrameGrab: { width: 320, height: 320 },
   router: { width: 200, height: 80 },
@@ -258,6 +258,7 @@ export const createDefaultNodeData = (type: NodeType): WorkflowNodeData => {
     case "outputGallery":
       return {
         images: [],
+        videos: [],
       } as OutputGalleryNodeData;
     case "imageCompare":
       return {

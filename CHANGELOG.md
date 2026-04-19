@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-04-20
+
+### Added
+
+- **Onboarding & setup flow** — New first-run setup experience to get users configured and started quickly
+- **Interactive tutorial** — Guided onboarding tutorial that walks first-time users through the workflow editor with mock execution and step-by-step demonstration
+- **Kie.ai model expansion** — Added 7 new image models, Kling 3.0 / 3.0 Motion Control, Wan 2.7 (text-to-video & image-to-video), and Seedance 2.0 / 2.0 Fast video models
+- **Model fallback/redundancy** — Generation nodes now support a fallback model that automatically kicks in if the primary model fails, with a dedicated settings tab for configuring fallback parameters
+- **Loop edges** — Connect a node's output back to an upstream input with magenta-styled loop edges and configurable iteration counts via an edge toolbar
+- **Client-side polling** — Long-running Kie tasks now return immediately and poll for results on the client side, keeping the UI responsive during video/3D generation
+- **Download buttons** — All media-displaying nodes (image, video, audio, 3D) now have download buttons
+- **Output gallery extraction** — New "Extract" button on OutputGalleryNode to batch-create input nodes from gallery items
+- **Handle labels** — Connection handles now show descriptive labels on hover/select/drag for easier wiring
+
+### Fixed
+
+- **Video handle and edge colors** — Unified video handles, labels, and edges to consistent pink styling
+- **Loop execution reliability** — Fixed downstream observer collection during loop iterations, validated loop counts, and handled resume inside loops
+- **Orphaned edge cleanup** — Edges referencing deleted nodes are now filtered out on workflow load
+- **Audio stitching** — Embedded audio is preserved when stitching video segments
+- **Kie API compatibility** — Fixed Seedance 2.0 model ID mapping, schema defaults pre-population, and video/audio upload handling
+
 ## [1.4.0] - 2026-04-02
 
 ### Added
