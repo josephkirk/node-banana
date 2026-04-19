@@ -137,6 +137,8 @@ export async function executeGenerate3D(
           output3dUrl: result.model3dUrl,
           status: "complete",
           error: null,
+          savedFilename: null,
+          savedFilePath: null,
         });
 
         // Track cost if applicable

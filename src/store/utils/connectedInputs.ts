@@ -403,11 +403,13 @@ export function validateWorkflowPure(
   }
 
   // Check each Nano Banana node has required inputs (text required, image optional)
+  // Loop edges are excluded because they carry no data on the first iteration.
   nodes
     .filter((n) => n.type === "nanoBanana")
     .forEach((node) => {
       const textConnected = edges.some(
         (e) => e.target === node.id &&
+               !e.data?.isLoop &&
                (e.targetHandle === "text" || e.targetHandle?.startsWith("text-"))
       );
       if (!textConnected) {
@@ -421,6 +423,7 @@ export function validateWorkflowPure(
     .forEach((node) => {
       const textConnected = edges.some(
         (e) => e.target === node.id &&
+               !e.data?.isLoop &&
                (e.targetHandle === "text" || e.targetHandle?.startsWith("text-"))
       );
       if (!textConnected) {

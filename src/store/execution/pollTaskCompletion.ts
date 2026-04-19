@@ -50,19 +50,16 @@ export async function pollGenerateTask(
 
     // Wait before polling
     await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(resolve, interval);
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(new DOMException("The operation was aborted.", "AbortError"));
+      };
+      const timer = setTimeout(() => {
+        if (signal) signal.removeEventListener("abort", onAbort);
+        resolve();
+      }, interval);
       if (signal) {
-        const onAbort = () => {
-          clearTimeout(timer);
-          reject(new DOMException("The operation was aborted.", "AbortError"));
-        };
         signal.addEventListener("abort", onAbort, { once: true });
-        // Clean up listener when timer fires
-        const origResolve = resolve;
-        resolve = () => {
-          signal.removeEventListener("abort", onAbort);
-          origResolve();
-        };
       }
     });
 

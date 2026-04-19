@@ -112,12 +112,15 @@ export function TutorialOverlay() {
     }
 
     if (actionCompleted) {
-      completeCurrentStep();
-      // Advance to next step after configurable delay (default 1000ms)
+      // Advance to next step after configurable delay (default 1000ms).
+      // Both completeCurrentStep() and nextTutorialStep() are called inside
+      // the timeout so that the state update doesn't trigger a re-render
+      // whose cleanup would clear the pending timeout.
       const delay = currentStep.advanceDelay !== undefined ? currentStep.advanceDelay : 1000;
       if (advanceTimeoutRef.current) clearTimeout(advanceTimeoutRef.current);
       advanceTimeoutRef.current = setTimeout(() => {
         advanceTimeoutRef.current = null;
+        completeCurrentStep();
         nextTutorialStep();
       }, delay);
     }

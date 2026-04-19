@@ -224,13 +224,14 @@ export async function stitchVideosAsync(
         try {
           const blobSource = new BlobSource(videoBlobs[i]);
           const input = new Input({ source: blobSource, formats: ALL_FORMATS });
+          let extractedAudio = false;
           try {
+            const clipDuration = await input.computeDuration();
             const audioTracks = await input.getAudioTracks();
             if (audioTracks.length > 0) {
               const audioTrack = audioTracks[0];
               const sink = new AudioBufferSink(audioTrack);
-              const duration = await input.computeDuration();
-              for await (const wrapped of sink.buffers(0, duration)) {
+              for await (const wrapped of sink.buffers(0, clipDuration)) {
                 if (referenceSampleRate === null) {
                   referenceSampleRate = wrapped.buffer.sampleRate;
                   referenceChannels = wrapped.buffer.numberOfChannels;
@@ -240,8 +241,20 @@ export async function stitchVideosAsync(
                   wrapped.buffer.numberOfChannels === referenceChannels
                 ) {
                   allAudioBuffers.push(wrapped.buffer);
+                  extractedAudio = true;
                 }
               }
+            }
+            // If no audio was extracted (no tracks or incompatible params),
+            // push a silent buffer to maintain timeline alignment
+            if (!extractedAudio && referenceSampleRate && referenceChannels && clipDuration > 0) {
+              const silentSamples = Math.max(1, Math.floor(clipDuration * referenceSampleRate));
+              const silentBuffer = new AudioBuffer({
+                length: silentSamples,
+                numberOfChannels: referenceChannels,
+                sampleRate: referenceSampleRate,
+              });
+              allAudioBuffers.push(silentBuffer);
             }
           } finally {
             input.dispose();
