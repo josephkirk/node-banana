@@ -16,7 +16,7 @@ import { GenerationInput, ModelCapability } from "@/lib/providers/types";
 import { generateWithGemini, generateWithGeminiVideo } from "./providers/gemini";
 import { generateWithReplicate } from "./providers/replicate";
 import { clearFalInputMappingCache as _clearFalInputMappingCache, generateWithFalQueue } from "./providers/fal";
-import { generateWithKie } from "./providers/kie";
+import { submitKieTask } from "./providers/kie";
 import { generateWithWaveSpeed } from "./providers/wavespeed";
 
 // Re-export for backward compatibility (test file imports from route)
@@ -37,7 +37,7 @@ interface MultiProviderGenerateRequest extends GenerateRequest {
 }
 
 
-function buildMediaResponse(output: { type: string; data: string; url?: string }): NextResponse {
+export function buildMediaResponse(output: { type: string; data: string; url?: string }): NextResponse {
   if (output.type === "3d") {
     return NextResponse.json<GenerateResponse>({
       success: true,
@@ -341,28 +341,27 @@ export async function POST(request: NextRequest) {
         dynamicInputs: processedDynamicInputs,
       };
 
-      const result = await generateWithKie(requestId, kieApiKey, genInput);
-
-      if (!result.success) {
+      // Submit task and return immediately — client polls for completion
+      try {
+        const { taskId, isVeo } = await submitKieTask(requestId, kieApiKey, genInput);
+        return NextResponse.json<GenerateResponse>({
+          success: true,
+          polling: true,
+          taskId,
+          pollProvider: 'kie',
+          pollModelId: selectedModel.modelId,
+          pollModelName: selectedModel.displayName,
+          pollMediaType: mediaType || 'image',
+        });
+      } catch (error) {
         return NextResponse.json<GenerateResponse>(
           {
             success: false,
-            error: result.error || "Generation failed",
+            error: error instanceof Error ? error.message : "Task submission failed",
           },
           { status: 500 }
         );
       }
-
-      // Return first output
-      const output = result.outputs?.[0];
-      if (!output?.data && !output?.url) {
-        return NextResponse.json<GenerateResponse>(
-          { success: false, error: "No output in generation result" },
-          { status: 500 }
-        );
-      }
-
-      return buildMediaResponse(output);
     }
 
     if (provider === "wavespeed") {
