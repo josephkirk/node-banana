@@ -397,9 +397,12 @@ export async function pollKieTaskCompletion(
   taskId: string,
 ): Promise<{ success: boolean; data?: Record<string, unknown>; error?: string }> {
   const maxWaitTime = 10 * 60 * 1000; // 10 minutes for video
-  const pollInterval = 2000; // 2 seconds
+  let pollInterval = 2000; // start at 2s
+  const maxInterval = 10000; // cap at 10s
   const startTime = Date.now();
   let lastStatus = "";
+  let consecutiveErrors = 0;
+  const maxConsecutiveErrors = 5;
 
   const pollUrl = `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`;
 
@@ -410,31 +413,63 @@ export async function pollKieTaskCompletion(
 
     await new Promise(resolve => setTimeout(resolve, pollInterval));
 
-    const response = await fetch(pollUrl, {
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-      },
-    });
+    let response: Response;
+    try {
+      response = await fetch(pollUrl, {
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+        },
+      });
+    } catch (err) {
+      consecutiveErrors++;
+      console.warn(`[API:${requestId}] Kie poll network error (${consecutiveErrors}/${maxConsecutiveErrors}):`, err);
+      if (consecutiveErrors >= maxConsecutiveErrors) {
+        return { success: false, error: `Polling failed after ${maxConsecutiveErrors} consecutive network errors` };
+      }
+      pollInterval = Math.min(pollInterval + 1000, maxInterval);
+      continue;
+    }
 
     if (!response.ok) {
-      // 404/422 can happen transiently when the task isn't registered yet — retry
-      if (response.status === 404 || response.status === 422) {
-        console.log(`[API:${requestId}] Kie poll returned ${response.status}, task not ready yet — retrying`);
+      // 404/422 = task not registered yet, 429 = rate limited, 5xx = server error — all transient
+      if (response.status === 404 || response.status === 422 || response.status === 429 || response.status >= 500) {
+        consecutiveErrors++;
+        console.log(`[API:${requestId}] Kie poll returned ${response.status} (${consecutiveErrors}/${maxConsecutiveErrors}) — retrying`);
+        if (consecutiveErrors >= maxConsecutiveErrors) {
+          return { success: false, error: `Polling failed after ${maxConsecutiveErrors} consecutive HTTP ${response.status} errors` };
+        }
+        pollInterval = Math.min(pollInterval + 1000, maxInterval);
         continue;
       }
       return { success: false, error: `Failed to poll status: ${response.status}` };
     }
 
-    const result = await response.json();
+    let result: Record<string, unknown>;
+    try {
+      result = await response.json();
+    } catch (err) {
+      consecutiveErrors++;
+      console.warn(`[API:${requestId}] Kie poll JSON parse error (${consecutiveErrors}/${maxConsecutiveErrors}):`, err);
+      if (consecutiveErrors >= maxConsecutiveErrors) {
+        return { success: false, error: `Polling failed after ${maxConsecutiveErrors} consecutive parse errors` };
+      }
+      pollInterval = Math.min(pollInterval + 1000, maxInterval);
+      continue;
+    }
+
+    // Reset on any successful poll response
+    consecutiveErrors = 0;
 
     // Kie API can return HTTP 200 with code != 200 (e.g. "recordInfo is null")
     if (result.code && result.code !== 200) {
-      console.log(`[API:${requestId}] Kie poll returned code ${result.code}: ${result.msg || ""} — retrying`);
+      console.log(`[API:${requestId}] Kie poll returned code ${result.code}: ${(result as Record<string, unknown>).msg || ""} — retrying`);
+      pollInterval = Math.min(pollInterval + 1000, maxInterval);
       continue;
     }
 
     // Kie API returns "state" in result.data.state (not "status")
-    const state = (result.data?.state || result.state || result.status || "").toUpperCase();
+    const data = result.data as Record<string, unknown> | undefined;
+    const state = ((data?.state || result.state || result.status || "") as string).toUpperCase();
 
     if (state !== lastStatus) {
       console.log(`[API:${requestId}] Kie task state: ${state}`);
@@ -442,16 +477,17 @@ export async function pollKieTaskCompletion(
     }
 
     if (state === "SUCCESS" || state === "COMPLETED") {
-      return { success: true, data: result.data || result };
+      return { success: true, data: data || result };
     }
 
     if (state === "FAIL" || state === "FAILED" || state === "ERROR") {
       console.error(`[API:${requestId}] Kie task failed. Full response:`, JSON.stringify(result).substring(0, 1000));
-      const errorMessage = result.data?.failMsg || result.data?.errorMessage || result.error || result.message || "Generation failed";
-      return { success: false, error: errorMessage };
+      const errorMessage = data?.failMsg || data?.errorMessage || result.error || result.message || "Generation failed";
+      return { success: false, error: errorMessage as string };
     }
 
     // Continue polling for: WAITING, QUEUING, GENERATING, PROCESSING, etc.
+    pollInterval = Math.min(pollInterval + 1000, maxInterval);
   }
 }
 
