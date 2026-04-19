@@ -315,7 +315,7 @@ export function VideoStitchNode({ id, data, selected }: NodeProps<VideoStitchNod
               isConnectable={true}
               style={{ top: `${topPercent}%` }}
             />
-            <HandleLabel label={`Video ${index + 1}`} side="target" color="rgb(96, 165, 250)" top={`calc(${topPercent}% - 9px)`} visible={showLabels} />
+            <HandleLabel label={`Video ${index + 1}`} side="target" color="var(--handle-color-video)" top={`calc(${topPercent}% - 9px)`} visible={showLabels} />
           </React.Fragment>
         );
       })}
@@ -339,7 +339,7 @@ export function VideoStitchNode({ id, data, selected }: NodeProps<VideoStitchNod
         data-handletype="video"
         isConnectable={true}
       />
-      <HandleLabel label="Output" side="source" color="rgb(96, 165, 250)" top="calc(50% - 9px)" visible={showLabels} />
+      <HandleLabel label="Output" side="source" color="var(--handle-color-video)" top="calc(50% - 9px)" visible={showLabels} />
     </>
   );
 

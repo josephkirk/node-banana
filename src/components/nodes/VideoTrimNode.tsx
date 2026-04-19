@@ -176,7 +176,7 @@ export function VideoTrimNode({ id, data, selected }: NodeProps<VideoTrimNodeTyp
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      <HandleLabel label="Video In" side="target" color="rgb(168, 85, 247)" top="calc(50% - 7px)" visible={showLabels} />
+      <HandleLabel label="Video In" side="target" color="var(--handle-color-video)" top="calc(50% - 7px)" visible={showLabels} />
 
       {/* Video Out (source, right, 50%) */}
       <Handle
@@ -187,7 +187,7 @@ export function VideoTrimNode({ id, data, selected }: NodeProps<VideoTrimNodeTyp
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      <HandleLabel label="Video Out" side="source" color="rgb(168, 85, 247)" top="calc(50% - 7px)" visible={showLabels} />
+      <HandleLabel label="Video Out" side="source" color="var(--handle-color-video)" top="calc(50% - 7px)" visible={showLabels} />
     </>
   );
 

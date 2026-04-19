@@ -197,7 +197,7 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
           data-handletype="video"
           style={{ top: "60%" }}
         />
-        <HandleLabel label="Video" side="target" color="rgb(168, 85, 247)" top="calc(60% - 18px)" visible={showLabels} />
+        <HandleLabel label="Video" side="target" color="var(--handle-color-video)" top="calc(60% - 18px)" visible={showLabels} />
 
         {displayMedia.length > 0 && (
           <div className="flex items-center justify-between px-2 py-1">

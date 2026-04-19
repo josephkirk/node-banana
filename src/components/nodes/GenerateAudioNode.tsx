@@ -248,7 +248,7 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
         </React.Fragment>
       );
     });
-  }, [nodeData.inputSchema]);
+  }, [nodeData.inputSchema, showLabels]);
 
   return (
     <>
@@ -429,7 +429,7 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
 
             {/* Download button */}
             <button
-              onClick={() => downloadMedia(nodeData.outputAudio!, "audio")}
+              onClick={() => downloadMedia(nodeData.outputAudio!, "audio").catch(() => {})}
               className="absolute top-1 right-7 w-5 h-5 bg-black/60 hover:bg-black/80 text-white rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
               title="Download audio"
             >

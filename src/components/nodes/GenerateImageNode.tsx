@@ -782,7 +782,7 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
             {/* Download + Clear buttons */}
             <div className="absolute top-1 right-1 flex items-center gap-0.5">
               <button
-                onClick={() => downloadMedia(nodeData.outputImage!, "image")}
+                onClick={() => downloadMedia(nodeData.outputImage!, "image").catch(() => {})}
                 className="w-5 h-5 bg-neutral-900/80 hover:bg-neutral-700 rounded flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
                 title="Download image"
               >

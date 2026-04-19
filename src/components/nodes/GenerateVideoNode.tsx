@@ -644,7 +644,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
         style={{ zIndex: 10 }}
       />
       {/* Output label */}
-      <HandleLabel label="Video" side="source" color="var(--handle-color-image)" visible={showLabels} />
+      <HandleLabel label="Video" side="source" color="var(--handle-color-video)" visible={showLabels} />
 
       <div className="relative w-full h-full min-h-0 overflow-hidden rounded-lg">
         {/* Preview area */}
@@ -735,7 +735,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
             {/* Download + Clear buttons */}
             <div className="absolute top-1 right-1 flex items-center gap-0.5">
               <button
-                onClick={() => downloadMedia(nodeData.outputVideo!, "video")}
+                onClick={() => downloadMedia(nodeData.outputVideo!, "video").catch(() => {})}
                 className="w-5 h-5 bg-neutral-900/80 hover:bg-neutral-700 rounded flex items-center justify-center text-neutral-400 hover:text-white transition-colors"
                 title="Download video"
               >

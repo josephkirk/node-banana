@@ -57,7 +57,7 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "35%" }}
       />
-      <HandleLabel label="Video In" side="target" color="rgb(168, 85, 247)" top="calc(35% - 7px)" visible={showLabels} />
+      <HandleLabel label="Video In" side="target" color="var(--handle-color-video)" top="calc(35% - 7px)" visible={showLabels} />
 
       {/* Video Out (source, right, 35%) */}
       <Handle
@@ -68,7 +68,7 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "35%" }}
       />
-      <HandleLabel label="Video Out" side="source" color="rgb(168, 85, 247)" top="calc(35% - 7px)" visible={showLabels} />
+      <HandleLabel label="Video Out" side="source" color="var(--handle-color-video)" top="calc(35% - 7px)" visible={showLabels} />
 
       {/* Settings In (target, left, 75%) */}
       <Handle

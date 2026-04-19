@@ -24,7 +24,7 @@ const EDGE_COLORS: Record<string, string> = {
   default: "#64748b", // Gray for unknown
   pause: "#ea580c", // Orange for paused edges
   reference: "#52525b", // Gray for reference connections
-  video: "#a855f7", // Purple for video connections
+  video: "#ec4899", // Pink for video connections
   audio: "#f97316", // Orange for audio connections
   text: "#2563eb", // Blue for text connections
   "3d": "#06b6d4", // Cyan for 3D connections

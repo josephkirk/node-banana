@@ -59,7 +59,7 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      <HandleLabel label="Video In" side="target" color="rgb(168, 85, 247)" top="calc(50% - 7px)" visible={showLabels} />
+      <HandleLabel label="Video In" side="target" color="var(--handle-color-video)" top="calc(50% - 7px)" visible={showLabels} />
 
       {/* Image Out (source, right, 50%) */}
       <Handle
