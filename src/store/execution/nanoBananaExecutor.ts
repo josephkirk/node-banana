@@ -10,6 +10,7 @@ import type {
 } from "@/types";
 import { calculateGenerationCost } from "@/utils/costCalculator";
 import { buildGenerateHeaders } from "@/store/utils/buildApiHeaders";
+import { pollGenerateTask } from "./pollTaskCompletion";
 import type { NodeExecutionContext } from "./types";
 
 export interface NanoBananaOptions {
@@ -141,7 +142,28 @@ export async function executeNanoBanana(
       throw new Error(errorMessage);
     }
 
-    const result = await response.json();
+    let result = await response.json();
+
+    // Handle polling response (long-running Kie tasks)
+    if (result.polling) {
+      result = await pollGenerateTask({
+        taskId: result.taskId,
+        provider: result.pollProvider,
+        modelId: result.pollModelId,
+        modelName: result.pollModelName,
+        mediaType: result.pollMediaType,
+        headers,
+        signal,
+      });
+
+      if (!result.success) {
+        updateNodeData(node.id, {
+          status: "error",
+          error: result.error || "Generation failed",
+        });
+        throw new Error(result.error || "Generation failed");
+      }
+    }
 
     if (result.success && result.image) {
       const timestamp = Date.now();

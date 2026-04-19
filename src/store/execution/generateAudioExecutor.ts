@@ -7,6 +7,7 @@
 
 import type { GenerateAudioNodeData } from "@/types";
 import { buildGenerateHeaders } from "@/store/utils/buildApiHeaders";
+import { pollGenerateTask } from "./pollTaskCompletion";
 import type { NodeExecutionContext } from "./types";
 
 export interface GenerateAudioOptions {
@@ -118,7 +119,29 @@ export async function executeGenerateAudio(
       throw new Error(errorMessage);
     }
 
-    const result = await response.json();
+    let result = await response.json();
+
+    // Handle polling response (long-running Kie tasks)
+    if (result.polling) {
+      result = await pollGenerateTask({
+        taskId: result.taskId,
+        provider: result.pollProvider,
+        modelId: result.pollModelId,
+        modelName: result.pollModelName,
+        mediaType: result.pollMediaType,
+        headers,
+        signal,
+      });
+
+      if (!result.success) {
+        updateNodeData(node.id, {
+          status: "error",
+          error: result.error || "Audio generation failed",
+        });
+        errorHandled = true;
+        throw new Error(result.error || "Audio generation failed");
+      }
+    }
 
     // Handle audio response (audio or audioUrl field)
     const audioData = result.audio || result.audioUrl;

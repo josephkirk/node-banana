@@ -7,6 +7,7 @@
 
 import type { Generate3DNodeData } from "@/types";
 import { buildGenerateHeaders } from "@/store/utils/buildApiHeaders";
+import { pollGenerateTask } from "./pollTaskCompletion";
 import type { NodeExecutionContext } from "./types";
 
 export interface Generate3DOptions {
@@ -106,7 +107,28 @@ export async function executeGenerate3D(
       throw new Error(errorMessage);
     }
 
-    const result = await response.json();
+    let result = await response.json();
+
+    // Handle polling response (long-running Kie tasks)
+    if (result.polling) {
+      result = await pollGenerateTask({
+        taskId: result.taskId,
+        provider: result.pollProvider,
+        modelId: result.pollModelId,
+        modelName: result.pollModelName,
+        mediaType: result.pollMediaType,
+        headers,
+        signal,
+      });
+
+      if (!result.success) {
+        updateNodeData(node.id, {
+          status: "error",
+          error: result.error || "3D generation failed",
+        });
+        throw new Error(result.error || "3D generation failed");
+      }
+    }
 
     if (result.success && result.model3dUrl) {
       updateNodeData(node.id, {
