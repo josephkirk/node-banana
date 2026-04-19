@@ -109,6 +109,12 @@ interface ModelSearchDialogProps {
   onModelSelected?: (model: ProviderModel) => void;
   /** Initial capability filter - 'image' for image nodes, 'video' for video nodes */
   initialCapabilityFilter?: CapabilityFilter;
+  /** Show a "Remove fallback" row above the results list (fallback-selection mode) */
+  showClearOption?: boolean;
+  /** Callback when the "Remove fallback" row is clicked */
+  onClearSelection?: () => void;
+  /** Custom dialog title (defaults to "Browse Models") */
+  title?: string;
 }
 
 export function ModelSearchDialog({
@@ -117,6 +123,9 @@ export function ModelSearchDialog({
   initialProvider,
   onModelSelected,
   initialCapabilityFilter,
+  showClearOption,
+  onClearSelection,
+  title = "Browse Models",
 }: ModelSearchDialogProps) {
   const {
     addNode,
@@ -571,7 +580,7 @@ export function ModelSearchDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-700">
           <h2 className="text-lg font-semibold text-neutral-100">
-            Browse Models
+            {title}
           </h2>
           <button
             onClick={onClose}
@@ -796,6 +805,20 @@ export function ModelSearchDialog({
             </div>
           ) : models.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-48 gap-2">
+              {showClearOption && onClearSelection && (
+                <button
+                  onClick={() => onClearSelection()}
+                  className="w-full flex items-center justify-between px-3 py-2 mb-2 bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700 hover:border-red-500/50 rounded-lg transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-red-400 group-hover:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span className="text-sm text-neutral-200 group-hover:text-white">Remove fallback</span>
+                  </div>
+                  <span className="text-xs text-neutral-500">Clear current selection</span>
+                </button>
+              )}
               <svg
                 className="w-10 h-10 text-neutral-500"
                 fill="none"
@@ -816,6 +839,22 @@ export function ModelSearchDialog({
             </div>
           ) : (
             <div className="space-y-4">
+              {/* Remove fallback row (fallback-selection mode only) */}
+              {showClearOption && onClearSelection && (
+                <button
+                  onClick={() => onClearSelection()}
+                  className="w-full flex items-center justify-between px-3 py-2 bg-neutral-800/60 hover:bg-neutral-700/60 border border-neutral-700 hover:border-red-500/50 rounded-lg transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-red-400 group-hover:text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    <span className="text-sm text-neutral-200 group-hover:text-white">Remove fallback</span>
+                  </div>
+                  <span className="text-xs text-neutral-500">Clear current selection</span>
+                </button>
+              )}
+
               {/* Recently Used Section */}
               {filteredRecentModels.length > 0 && !searchQuery && (
                 <div className="bg-neutral-700/30 rounded-lg p-3">

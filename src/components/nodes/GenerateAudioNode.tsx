@@ -13,7 +13,9 @@ import { useAudioVisualization } from "@/hooks/useAudioVisualization";
 import { useAudioPlayback } from "@/hooks/useAudioPlayback";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
+import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
+import { downloadMedia } from "@/utils/downloadMedia";
 
 type GenerateAudioNodeType = Node<GenerateAudioNodeData, "generateAudio">;
 
@@ -23,6 +25,13 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
   const generationsPath = useWorkflowStore((state) => state.generationsPath);
   const [isBrowseDialogOpen, setIsBrowseDialogOpen] = useState(false);
   const [isLoadingCarouselAudio, setIsLoadingCarouselAudio] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"primary" | "fallback">("primary");
+
+  useEffect(() => {
+    if (!nodeData.fallbackModel && settingsTab === "fallback") {
+      setSettingsTab("primary");
+    }
+  }, [nodeData.fallbackModel, settingsTab]);
 
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
@@ -251,32 +260,57 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
             onToggle={handleToggleParams}
             nodeId={id}
           >
-            {/* Model selector: Browse button + current model display */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="text-[11px] text-neutral-200 truncate">
-                  {displayTitle}
-                </div>
-                <div className="text-[9px] text-neutral-500">
-                  {currentProvider}
-                </div>
-              </div>
-              <button
-                onClick={() => setIsBrowseDialogOpen(true)}
-                className="nodrag nopan shrink-0 px-2 py-1 text-[10px] bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 rounded text-neutral-300 transition-colors"
-              >
-                Browse
-              </button>
-            </div>
+            {/* Tab bar for primary/fallback settings */}
+            {nodeData.fallbackModel && (
+              <SettingsTabBar
+                activeTab={settingsTab}
+                onTabChange={setSettingsTab}
+                primaryLabel={nodeData.selectedModel?.displayName || "Primary"}
+                fallbackLabel={nodeData.fallbackModel.displayName}
+              />
+            )}
 
-            {/* External provider parameters - reuse ModelParameters component */}
-            {nodeData.selectedModel?.modelId && (
+            {/* Primary tab content */}
+            {settingsTab === "primary" && (
+              <>
+                {/* Model selector: Browse button + current model display */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[11px] text-neutral-200 truncate">
+                      {displayTitle}
+                    </div>
+                    <div className="text-[9px] text-neutral-500">
+                      {currentProvider}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsBrowseDialogOpen(true)}
+                    className="nodrag nopan shrink-0 px-2 py-1 text-[10px] bg-neutral-700 hover:bg-neutral-600 border border-neutral-600 rounded text-neutral-300 transition-colors"
+                  >
+                    Browse
+                  </button>
+                </div>
+
+                {/* External provider parameters */}
+                {nodeData.selectedModel?.modelId && (
+                  <ModelParameters
+                    modelId={nodeData.selectedModel.modelId}
+                    provider={currentProvider}
+                    parameters={nodeData.parameters || {}}
+                    onParametersChange={handleParametersChange}
+                    onInputsLoaded={handleInputsLoaded}
+                  />
+                )}
+              </>
+            )}
+
+            {/* Fallback tab content */}
+            {settingsTab === "fallback" && nodeData.fallbackModel && (
               <ModelParameters
-                modelId={nodeData.selectedModel.modelId}
-                provider={currentProvider}
-                parameters={nodeData.parameters || {}}
-                onParametersChange={handleParametersChange}
-                onInputsLoaded={handleInputsLoaded}
+                modelId={nodeData.fallbackModel.modelId}
+                provider={nodeData.fallbackModel.provider}
+                parameters={nodeData.fallbackParameters || {}}
+                onParametersChange={(p) => updateNodeData(id, { fallbackParameters: p })}
               />
             )}
           </InlineParameterPanel>
@@ -297,6 +331,14 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
         {/* Output audio player */}
         {nodeData.outputAudio && (
           <div className="relative group mt-2">
+            {nodeData.__usedFallback && (
+              <div
+                className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 text-[9px] font-medium pointer-events-auto z-10"
+                title={`Primary failed: ${nodeData.__primaryError ?? "unknown"}\nUsed fallback: ${nodeData.__fallbackModelUsed ?? ""}`}
+              >
+                Fallback used
+              </div>
+            )}
             {/* Waveform visualization */}
             {isLoadingWaveform ? (
               <div className="flex items-center justify-center bg-neutral-900/50 rounded h-16">
@@ -379,6 +421,16 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
               )}
             </div>
 
+            {/* Download button */}
+            <button
+              onClick={() => downloadMedia(nodeData.outputAudio!, "audio")}
+              className="absolute top-1 right-7 w-5 h-5 bg-black/60 hover:bg-black/80 text-white rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+              title="Download audio"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+            </button>
             {/* Clear button */}
             <button
               onClick={handleClearAudio}

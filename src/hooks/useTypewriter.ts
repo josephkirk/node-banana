@@ -13,6 +13,7 @@ interface UseTypewriterResult {
  * @returns Object with displayedText (current partial text) and isComplete (true when done)
  */
 export function useTypewriter(text: string, speed: number = 50): UseTypewriterResult {
+  const safeSpeed = Math.max(16, speed);
   const [displayedText, setDisplayedText] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -38,10 +39,10 @@ export function useTypewriter(text: string, speed: number = 50): UseTypewriterRe
         }
         return nextIndex;
       });
-    }, speed);
+    }, safeSpeed);
 
     return () => clearInterval(timer);
-  }, [text, speed, currentIndex]);
+  }, [text, safeSpeed, currentIndex]);
 
   return {
     displayedText,

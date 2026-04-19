@@ -1,8 +1,11 @@
 "use client";
 
-import { FTUXStepProps } from "@/types/ftux";
+interface FTUXReadyStepProps {
+  onStartTutorial: () => void;
+  onComplete: () => void;
+}
 
-export function FTUXReadyStep({ onStartTutorial, onComplete }: FTUXStepProps) {
+export function FTUXReadyStep({ onStartTutorial, onComplete }: FTUXReadyStepProps) {
   return (
     <div className="flex flex-col items-center justify-center py-12 px-8">
       <h2 className="text-2xl font-semibold text-neutral-100 mb-4">

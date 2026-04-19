@@ -214,10 +214,12 @@ describe("executeWorkflow with loop edges", () => {
     // Start execution (don't await)
     const executionPromise = useWorkflowStore.getState().executeWorkflow();
 
-    // Abort after a short delay
-    setTimeout(() => {
-      useWorkflowStore.getState().stopWorkflow();
-    }, 10);
+    // Poll until execution has actually started before stopping
+    await vi.waitFor(() => {
+      expect(useWorkflowStore.getState().isRunning).toBe(true);
+    }, { timeout: 1000 });
+
+    useWorkflowStore.getState().stopWorkflow();
 
     await executionPromise;
 

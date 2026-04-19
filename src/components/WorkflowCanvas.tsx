@@ -73,6 +73,8 @@ import { resolveTextSourcesThroughRouters } from "@/store/utils/connectedInputs"
 import { wouldCreateCycle } from "@/store/utils/executionUtils";
 import { parseVarTags } from "@/utils/parseVarTags";
 import { AnnotationModal } from "./AnnotationModal";
+import { ModelSearchDialog } from "./modals/ModelSearchDialog";
+import { LLMFallbackPopover } from "./nodes/LLMFallbackPopover";
 import { browseRegistry } from "@/utils/browseRegistry";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { SplitGridSettingsModal } from "./SplitGridSettingsModal";
@@ -314,7 +316,7 @@ export function WorkflowCanvas() {
   const clearWorkflow = useWorkflowStore((state) => state.clearWorkflow);
   const setHoveredNodeId = useWorkflowStore((state) => state.setHoveredNodeId);
   const openAnnotationModal = useAnnotationStore((state) => state.openModal);
-  const { screenToFlowPosition, getViewport, zoomIn, zoomOut, setViewport, setCenter, fitView } = useReactFlow();
+  const { screenToFlowPosition, getViewport, zoomIn, zoomOut, setViewport, setCenter } = useReactFlow();
   const { show: showToast } = useToast();
   const [isDragOver, setIsDragOver] = useState(false);
   const [dropType, setDropType] = useState<"image" | "audio" | "workflow" | "node" | null>(null);
@@ -324,6 +326,13 @@ export function WorkflowCanvas() {
   const [isBuildingWorkflow, setIsBuildingWorkflow] = useState(false);
   const [showNewProjectSetup, setShowNewProjectSetup] = useState(false);
   const [expandingNode, setExpandingNode] = useState<{ id: string; type: string } | null>(null);
+
+  // Fallback model picker state
+  const [fallbackDialogState, setFallbackDialogState] = useState<
+    | { nodeId: string; capability: "image" | "video" | "3d" | "audio" }
+    | null
+  >(null);
+  const [llmFallbackState, setLlmFallbackState] = useState<{ nodeId: string } | null>(null);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const tutorialViewportSet = useRef(false);
 
@@ -2269,6 +2278,52 @@ export function WorkflowCanvas() {
               </button>
             ) : undefined;
 
+            // Fallback shield button for generation nodes
+            const isGenerationNode =
+              node.type === "nanoBanana" ||
+              node.type === "generateVideo" ||
+              node.type === "generate3d" ||
+              node.type === "generateAudio" ||
+              node.type === "llmGenerate";
+            const fbData = node.data as any;
+            const hasFallback = !!fbData?.fallbackModel;
+            const fallbackName = fbData?.fallbackModel?.displayName;
+            const capabilityForNodeType = (t: string | undefined) => {
+              if (t === "nanoBanana") return "image" as const;
+              if (t === "generateVideo") return "video" as const;
+              if (t === "generate3d") return "3d" as const;
+              if (t === "generateAudio") return "audio" as const;
+              return null;
+            };
+            const fallbackButton = isGenerationNode ? (
+              <div className="relative shrink-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (node.type === "llmGenerate") {
+                      setLlmFallbackState({ nodeId: node.id });
+                    } else {
+                      const cap = capabilityForNodeType(node.type);
+                      if (cap) setFallbackDialogState({ nodeId: node.id, capability: cap });
+                    }
+                  }}
+                  className={`nodrag nopan p-0.5 rounded transition-colors border flex items-center ${
+                    hasFallback
+                      ? "text-blue-400 border-blue-600/60 hover:text-blue-200"
+                      : "text-neutral-500 border-neutral-600 hover:text-neutral-200"
+                  }`}
+                  title={hasFallback ? `Fallback: ${fallbackName}` : "Set fallback model (runs if primary fails)"}
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 12a8 8 0 0 1 16 0M12 4v8M8 12Q9 7 12 4M16 12Q15 7 12 4M4 12l8 8M20 12l-8 8M11 20h2" />
+                  </svg>
+                </button>
+                {hasFallback && (
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-blue-400 ring-1 ring-neutral-900 pointer-events-none" />
+                )}
+              </div>
+            ) : undefined;
+
             return (
               <FloatingNodeHeader
                 key={`header-${node.id}`}
@@ -2284,7 +2339,12 @@ export function WorkflowCanvas() {
                 customTitle={node.data?.customTitle}
                 comment={node.data?.comment}
                 provider={(node.data as any)?.selectedModel?.provider}
-                headerAction={browseAction}
+                headerAction={(browseAction || fallbackButton) ? (
+                  <>
+                    {browseAction}
+                    {fallbackButton}
+                  </>
+                ) : undefined}
                 headerButtons={optionalToggle}
                 onCustomTitleChange={handleCustomTitleChange}
                 onCommentChange={handleCommentChange}
@@ -2418,6 +2478,41 @@ export function WorkflowCanvas() {
           />
         );
       })()}
+
+      {/* Fallback model picker dialog (image/video/audio/3d) */}
+      {fallbackDialogState && (
+        <ModelSearchDialog
+          isOpen
+          onClose={() => setFallbackDialogState(null)}
+          title="Select fallback model"
+          initialCapabilityFilter={fallbackDialogState.capability}
+          showClearOption
+          onClearSelection={() => {
+            updateNodeData(fallbackDialogState.nodeId, { fallbackModel: undefined, fallbackParameters: undefined });
+            setFallbackDialogState(null);
+          }}
+          onModelSelected={(model) => {
+            updateNodeData(fallbackDialogState.nodeId, {
+              fallbackModel: {
+                provider: model.provider,
+                modelId: model.id,
+                displayName: model.name,
+                capabilities: model.capabilities,
+              },
+              fallbackParameters: {},
+            });
+            setFallbackDialogState(null);
+          }}
+        />
+      )}
+
+      {/* LLM fallback popover */}
+      {llmFallbackState && (
+        <LLMFallbackPopover
+          nodeId={llmFallbackState.nodeId}
+          onClose={() => setLlmFallbackState(null)}
+        />
+      )}
 
       {/* AnnotationModal is globally managed by annotationStore */}
       <AnnotationModal />

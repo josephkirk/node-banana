@@ -8,6 +8,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { OutputGalleryNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { defaultNodeDimensions } from "@/store/utils/nodeDefaults";
+import { downloadMedia as downloadMediaUtil } from "@/utils/downloadMedia";
 
 type MediaItem = { type: "image" | "video"; src: string };
 
@@ -67,14 +68,9 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
     const item = displayMedia[lightboxIndex];
     if (!item) return;
 
-    const link = document.createElement("a");
-    link.href = item.src;
-    link.download = item.type === "video"
-      ? `gallery-video-${lightboxIndex + 1}.mp4`
-      : `gallery-image-${lightboxIndex + 1}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadMediaUtil(item.src, item.type).catch((err) =>
+      console.error("Gallery download failed:", err)
+    );
   }, [lightboxIndex, displayMedia]);
 
   const removeMedia = useCallback((index: number) => {
@@ -82,22 +78,35 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
     if (!item) return;
 
     if (item.type === "image") {
-      const filtered = (nodeData.images || []).filter((img) => img !== item.src);
-      updateNodeData(id, { images: filtered });
+      const images = [...(nodeData.images || [])];
+      const imageRefs = [...(nodeData.imageRefs || [])];
+      const imgIndex = images.indexOf(item.src);
+      if (imgIndex !== -1) {
+        images.splice(imgIndex, 1);
+        if (imgIndex < imageRefs.length) imageRefs.splice(imgIndex, 1);
+      }
+      updateNodeData(id, { images, imageRefs });
     } else {
-      const filtered = (nodeData.videos || []).filter((vid) => vid !== item.src);
-      updateNodeData(id, { videos: filtered });
+      const videos = [...(nodeData.videos || [])];
+      const videoRefs = [...(nodeData.videoRefs || [])];
+      const vidIndex = videos.indexOf(item.src);
+      if (vidIndex !== -1) {
+        videos.splice(vidIndex, 1);
+        if (vidIndex < videoRefs.length) videoRefs.splice(vidIndex, 1);
+      }
+      updateNodeData(id, { videos, videoRefs });
     }
 
     // Adjust lightbox after removal
     if (lightboxIndex !== null) {
-      if (displayMedia.length <= 1) {
+      const newLength = displayMedia.length - 1;
+      if (newLength <= 0) {
         setLightboxIndex(null);
-      } else if (lightboxIndex >= displayMedia.length - 1) {
-        setLightboxIndex(displayMedia.length - 2);
+      } else if (lightboxIndex >= newLength) {
+        setLightboxIndex(newLength - 1);
       }
     }
-  }, [displayMedia, nodeData.images, nodeData.videos, updateNodeData, id, lightboxIndex]);
+  }, [displayMedia, nodeData.images, nodeData.imageRefs, nodeData.videos, nodeData.videoRefs, updateNodeData, id, lightboxIndex]);
 
   const handleExtractToInputNodes = useCallback(() => {
     const galleryNode = getNodes().find((n) => n.id === id);
@@ -228,6 +237,7 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
                 <button
                   key={idx}
                   onClick={() => openLightbox(idx)}
+                  aria-label={item.type === "video" ? `Open video ${idx + 1}` : `Open image ${idx + 1}`}
                   className="aspect-square rounded border border-neutral-700 hover:border-neutral-500 overflow-hidden transition-colors relative"
                 >
                   {item.type === "video" ? (

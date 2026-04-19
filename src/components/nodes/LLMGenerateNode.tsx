@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Handle, Position, NodeProps, Node } from "@xyflow/react";
 import { BaseNode } from "./BaseNode";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { LLMGenerateNodeData, LLMProvider, LLMModelType } from "@/types";
 import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
+import { SettingsTabBar } from "./SettingsTabBar";
 
 // LLM providers and models
 const LLM_PROVIDERS: { value: LLMProvider; label: string }[] = [
@@ -54,6 +55,13 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
   }, [id, updateNodeData]);
 
   const [copied, setCopied] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"primary" | "fallback">("primary");
+
+  useEffect(() => {
+    if (!nodeData.fallbackModel && settingsTab === "fallback") {
+      setSettingsTab("primary");
+    }
+  }, [nodeData.fallbackModel, settingsTab]);
 
   const handleCopyOutput = useCallback(async () => {
     if (nodeData.outputText) {
@@ -129,68 +137,131 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
           onToggle={handleToggleParams}
           nodeId={id}
         >
-          {/* LLM-specific controls */}
-          <div className="space-y-1.5 max-w-[280px]">
-            {/* Provider */}
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] text-neutral-400 shrink-0">Provider</label>
-              <select
-                value={provider}
-                onChange={handleProviderChange}
-                className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
-              >
-                {LLM_PROVIDERS.map(p => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
-            </div>
+          {/* Tab bar for primary/fallback settings */}
+          {nodeData.fallbackModel && (
+            <SettingsTabBar
+              activeTab={settingsTab}
+              onTabChange={setSettingsTab}
+              primaryLabel={nodeData.model || "Primary"}
+              fallbackLabel={nodeData.fallbackModel.displayName}
+            />
+          )}
 
-            {/* Model */}
-            <div className="flex items-center gap-2">
-              <label className="text-[11px] text-neutral-400 shrink-0">Model</label>
-              <select
-                value={nodeData.model || availableModels[0].value}
-                onChange={handleModelChange}
-                className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
-              >
-                {availableModels.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-            </div>
+          {/* Primary tab: LLM-specific controls */}
+          {settingsTab === "primary" && (
+            <div className="space-y-1.5 max-w-[280px]">
+              {/* Provider */}
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] text-neutral-400 shrink-0">Provider</label>
+                <select
+                  value={provider}
+                  onChange={handleProviderChange}
+                  className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
+                >
+                  {LLM_PROVIDERS.map(p => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Temperature */}
-            <div className="flex flex-col gap-0.5">
-              <label className="text-[11px] text-neutral-400">
-                Temperature: {(nodeData.temperature ?? 0.7).toFixed(2)}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max={provider === "anthropic" ? "1" : "2"}
-                step="0.01"
-                value={nodeData.temperature ?? 0.7}
-                onChange={handleTemperatureChange}
-                className="nodrag nopan w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-              />
-            </div>
+              {/* Model */}
+              <div className="flex items-center gap-2">
+                <label className="text-[11px] text-neutral-400 shrink-0">Model</label>
+                <select
+                  value={nodeData.model || availableModels[0].value}
+                  onChange={handleModelChange}
+                  className="nodrag nopan flex-1 min-w-0 text-[11px] py-1 px-2 bg-[#1a1a1a] rounded-md focus:outline-none focus:ring-1 focus:ring-neutral-600 text-white"
+                >
+                  {availableModels.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Max Tokens */}
-            <div className="flex flex-col gap-0.5">
-              <label className="text-[11px] text-neutral-400">
-                Max Tokens: {(nodeData.maxTokens || 2048).toLocaleString()}
-              </label>
-              <input
-                type="range"
-                min="256"
-                max="16384"
-                step="256"
-                value={nodeData.maxTokens || 2048}
-                onChange={handleMaxTokensChange}
-                className="nodrag nopan w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-              />
+              {/* Temperature */}
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[11px] text-neutral-400">
+                  Temperature: {(nodeData.temperature ?? 0.7).toFixed(2)}
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max={provider === "anthropic" ? "1" : "2"}
+                  step="0.01"
+                  value={nodeData.temperature ?? 0.7}
+                  onChange={handleTemperatureChange}
+                  className="nodrag nopan w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+              </div>
+
+              {/* Max Tokens */}
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[11px] text-neutral-400">
+                  Max Tokens: {(nodeData.maxTokens || 2048).toLocaleString()}
+                </label>
+                <input
+                  type="range"
+                  min="256"
+                  max="16384"
+                  step="256"
+                  value={nodeData.maxTokens || 2048}
+                  onChange={handleMaxTokensChange}
+                  className="nodrag nopan w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Fallback tab: temperature + maxTokens for fallback model */}
+          {settingsTab === "fallback" && nodeData.fallbackModel && (() => {
+            const fbParams = nodeData.fallbackParameters || {};
+            const fbTemp = (fbParams.temperature as number | undefined) ?? 0.7;
+            const fbMaxTokens = (fbParams.maxTokens as number | undefined) ?? 2048;
+            const fbProvider = nodeData.fallbackModel!.provider;
+            const isAnthropicFb = fbProvider === "anthropic";
+
+            return (
+              <div className="space-y-1.5 max-w-[280px]">
+                {/* Read-only model display */}
+                <div className="flex items-center gap-2">
+                  <label className="text-[11px] text-neutral-400 shrink-0">Model</label>
+                  <span className="text-[11px] text-neutral-200 truncate">{nodeData.fallbackModel!.displayName}</span>
+                </div>
+
+                {/* Temperature */}
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[11px] text-neutral-400">
+                    Temperature: {fbTemp.toFixed(2)}
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max={isAnthropicFb ? "1" : "2"}
+                    step="0.01"
+                    value={fbTemp}
+                    onChange={(e) => updateNodeData(id, { fallbackParameters: { ...fbParams, temperature: parseFloat(e.target.value) } })}
+                    className="nodrag nopan w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
+                </div>
+
+                {/* Max Tokens */}
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[11px] text-neutral-400">
+                    Max Tokens: {fbMaxTokens.toLocaleString()}
+                  </label>
+                  <input
+                    type="range"
+                    min="256"
+                    max="16384"
+                    step="256"
+                    value={fbMaxTokens}
+                    onChange={(e) => updateNodeData(id, { fallbackParameters: { ...fbParams, maxTokens: parseInt(e.target.value, 10) } })}
+                    className="nodrag nopan w-full h-1 bg-neutral-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                  />
+                </div>
+              </div>
+            );
+          })()}
         </InlineParameterPanel>
       ) : undefined}
     >
@@ -259,6 +330,14 @@ export function LLMGenerateNode({ id, data, selected }: NodeProps<LLMGenerateNod
           </div>
         ) : nodeData.outputText ? (
           <div className="group/text relative w-full h-full bg-neutral-900/40 p-2 overflow-auto nowheel">
+            {nodeData.__usedFallback && (
+              <div
+                className="mb-1 inline-block px-1.5 py-0.5 rounded bg-emerald-900/70 text-emerald-300 text-[9px] font-medium"
+                title={`Primary failed: ${nodeData.__primaryError ?? "unknown"}\nUsed fallback: ${nodeData.__fallbackModelUsed ?? ""}`}
+              >
+                Fallback used
+              </div>
+            )}
             <p className="text-[10px] text-neutral-300 whitespace-pre-wrap break-words">
               {nodeData.outputText}
             </p>

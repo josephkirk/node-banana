@@ -293,7 +293,7 @@ export function BaseNode({
         ? `relative flex flex-col w-full h-full overflow-visible bg-neutral-800 rounded-lg ${selected ? "ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/25" : ""}`
         : "contents"}
       onDoubleClick={handleResizeHandleDblClick}
-      data-tutorial={dataTutorial}
+      data-tutorial={hasExpandedSettings ? dataTutorial : undefined}
     >
       <NodeResizer
         isVisible={selected}
@@ -316,6 +316,7 @@ export function BaseNode({
           ${!fullBleed && selected && settingsExpanded ? "border-blue-500" : ""}
           ${className}
         `}
+        data-tutorial={!hasExpandedSettings ? dataTutorial : undefined}
         onMouseEnter={(e) => {
           if (e.buttons !== 0 || isPanningRef.current || isDraggingNodeRef.current) return;
           setHoveredNodeId(id);

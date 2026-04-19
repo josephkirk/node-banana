@@ -9,6 +9,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { useToast } from "@/components/Toast";
 import { GLBViewerNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
+import { downloadMedia } from "@/utils/downloadMedia";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -472,12 +473,20 @@ export function GLBViewerNode({ id, data, selected }: NodeProps<GLBViewerNodeTyp
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                   Captured
                 </span>
-                <button
-                  onClick={() => updateNodeData(id, { capturedImage: null })}
-                  className="text-[10px] text-neutral-500 hover:text-neutral-300 transition-colors"
-                >
-                  Clear
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => downloadMedia(nodeData.capturedImage!, "image")}
+                    className="text-[10px] text-neutral-500 hover:text-neutral-300 transition-colors"
+                  >
+                    Download
+                  </button>
+                  <button
+                    onClick={() => updateNodeData(id, { capturedImage: null })}
+                    className="text-[10px] text-neutral-500 hover:text-neutral-300 transition-colors"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
               <img
                 src={adaptiveCapturedImage ?? undefined}

@@ -17,6 +17,9 @@ export function TutorialOverlay() {
   const [showHighlight, setShowHighlight] = useState(false);
   const nodesPopulated = useRef(false);
   const demonstrateNodesAdded = useRef(false);
+  const demonstrateTimeoutIds = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const advanceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const populateTimeoutIds = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const tutorialActive = useFTUXStore((state) => state.tutorialActive);
   const currentTutorialStep = useFTUXStore((state) => state.currentTutorialStep);
@@ -112,10 +115,19 @@ export function TutorialOverlay() {
       completeCurrentStep();
       // Advance to next step after configurable delay (default 1000ms)
       const delay = currentStep.advanceDelay !== undefined ? currentStep.advanceDelay : 1000;
-      setTimeout(() => {
+      if (advanceTimeoutRef.current) clearTimeout(advanceTimeoutRef.current);
+      advanceTimeoutRef.current = setTimeout(() => {
+        advanceTimeoutRef.current = null;
         nextTutorialStep();
       }, delay);
     }
+
+    return () => {
+      if (advanceTimeoutRef.current) {
+        clearTimeout(advanceTimeoutRef.current);
+        advanceTimeoutRef.current = null;
+      }
+    };
   }, [
     tutorialActive,
     currentTutorialStep,
@@ -161,9 +173,11 @@ export function TutorialOverlay() {
     // Check if we're on the "populate-content" step
     if (currentStep?.id === "populate-content" && !currentStep.completed) {
       nodesPopulated.current = true;
+      const timeoutIds = populateTimeoutIds.current;
+      timeoutIds.length = 0;
 
       // Wait a bit before populating to show the message first
-      setTimeout(() => {
+      timeoutIds.push(setTimeout(() => {
         // Find the image input and prompt nodes
         const imageInputNode = nodes.find((node) => node.type === "imageInput");
         const promptNode = nodes.find((node) => node.type === "prompt");
@@ -184,11 +198,16 @@ export function TutorialOverlay() {
         }
 
         // Auto-advance after populating
-        setTimeout(() => {
+        timeoutIds.push(setTimeout(() => {
           completeCurrentStep();
           nextTutorialStep();
-        }, 1500);
-      }, 1000);
+        }, 1500));
+      }, 1000));
+
+      return () => {
+        timeoutIds.forEach(clearTimeout);
+        timeoutIds.length = 0;
+      };
     }
 
     // Reset ref when tutorial ends
@@ -211,8 +230,15 @@ export function TutorialOverlay() {
       const onConnect = useWorkflowStore.getState().onConnect;
       const updateNodeData = useWorkflowStore.getState().updateNodeData;
 
+      // Track all timeouts so cleanup can clear them if tutorial is skipped
+      const timeoutIds = demonstrateTimeoutIds.current;
+      timeoutIds.length = 0;
+      const schedule = (fn: () => void, ms: number) => {
+        timeoutIds.push(setTimeout(fn, ms));
+      };
+
       // Initial delay to show message
-      setTimeout(() => {
+      schedule(() => {
         // Find the Generate Image node
         const generateNode = nodes.find((n) => n.type === "nanoBanana");
         if (!generateNode) return;
@@ -227,14 +253,14 @@ export function TutorialOverlay() {
           y: baseY - 350,
         });
 
-        setTimeout(() => {
+        schedule(() => {
           // Add Generate Video node
           const videoNodeId = addNode("generateVideo", {
             x: baseX + 750,
             y: baseY - 350,
           });
 
-          setTimeout(() => {
+          schedule(() => {
             // Connect Prompt → Video (text)
             onConnect({
               source: videoPromptId,
@@ -243,7 +269,7 @@ export function TutorialOverlay() {
               targetHandle: "text",
             });
 
-            setTimeout(() => {
+            schedule(() => {
               // Connect Image → Video (image)
               onConnect({
                 source: generateNode.id,
@@ -252,20 +278,20 @@ export function TutorialOverlay() {
                 targetHandle: "image",
               });
 
-              setTimeout(() => {
+              schedule(() => {
                 // Populate video prompt
                 updateNodeData(videoPromptId, {
                   prompt: "A bird soaring through clouds at sunset",
                 });
 
-                setTimeout(() => {
+                schedule(() => {
                   // Add Output for video
                   const videoOutputId = addNode("output", {
                     x: baseX + 1100,
                     y: baseY - 350,
                   });
 
-                  setTimeout(() => {
+                  schedule(() => {
                     // Connect Video → Output
                     onConnect({
                       source: videoNodeId,
@@ -275,21 +301,21 @@ export function TutorialOverlay() {
                     });
 
                     // LLM ANALYSIS BRANCH (bottom) - Clean horizontal layout with generous spacing
-                    setTimeout(() => {
+                    schedule(() => {
                       // Add Prompt node for LLM
                       const llmPromptId = addNode("prompt", {
                         x: baseX + 400,
                         y: baseY + 350,
                       });
 
-                      setTimeout(() => {
+                      schedule(() => {
                         // Add LLM Generate node
                         const llmNodeId = addNode("llmGenerate", {
                           x: baseX + 750,
                           y: baseY + 350,
                         });
 
-                        setTimeout(() => {
+                        schedule(() => {
                           // Connect Prompt → LLM (text)
                           onConnect({
                             source: llmPromptId,
@@ -298,7 +324,7 @@ export function TutorialOverlay() {
                             targetHandle: "text",
                           });
 
-                          setTimeout(() => {
+                          schedule(() => {
                             // Connect Image → LLM (image for analysis)
                             onConnect({
                               source: generateNode.id,
@@ -307,21 +333,21 @@ export function TutorialOverlay() {
                               targetHandle: "image",
                             });
 
-                            setTimeout(() => {
+                            schedule(() => {
                               // Populate LLM prompt
                               updateNodeData(llmPromptId, {
                                 prompt:
                                   "Give me an image generation prompt that shows this bird in a nightclub filled with other birds, also in costume. Only output the prompt and nothing else.",
                               });
 
-                              setTimeout(() => {
+                              schedule(() => {
                                 // Add second Generate Image node
                                 const generateNode2Id = addNode("nanoBanana", {
                                   x: baseX + 1100,
                                   y: baseY + 350,
                                 });
 
-                                setTimeout(() => {
+                                schedule(() => {
                                   // Connect LLM → Generate Image #2 (text prompt)
                                   onConnect({
                                     source: llmNodeId,
@@ -330,7 +356,7 @@ export function TutorialOverlay() {
                                     targetHandle: "text",
                                   });
 
-                                  setTimeout(() => {
+                                  schedule(() => {
                                     // Also connect original bird image as reference
                                     onConnect({
                                       source: generateNode.id,
@@ -339,14 +365,14 @@ export function TutorialOverlay() {
                                       targetHandle: "image",
                                     });
 
-                                    setTimeout(() => {
+                                    schedule(() => {
                                       // Add final Output
                                       const finalOutputId = addNode("output", {
                                         x: baseX + 1450,
                                         y: baseY + 350,
                                       });
 
-                                      setTimeout(() => {
+                                      schedule(() => {
                                         // Connect Generate Image #2 → Output
                                         onConnect({
                                           source: generateNode2Id,
@@ -356,7 +382,7 @@ export function TutorialOverlay() {
                                         });
 
                                         // Final delay before advancing
-                                        setTimeout(() => {
+                                        schedule(() => {
                                           completeCurrentStep();
                                           nextTutorialStep();
                                         }, 1000);
@@ -377,6 +403,11 @@ export function TutorialOverlay() {
           }, 400);
         }, 400);
       }, 1000);
+
+      return () => {
+        timeoutIds.forEach(clearTimeout);
+        timeoutIds.length = 0;
+      };
     }
 
     // Reset ref when tutorial ends

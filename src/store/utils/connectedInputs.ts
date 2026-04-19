@@ -369,7 +369,7 @@ export function getConnectedInputsPure(
   // Extract easeCurve data from parent EaseCurve node (if not already set by router passthrough)
   if (!easeCurve) {
     const easeCurveEdge = edges.find(
-      (e) => e.target === nodeId && e.targetHandle === "easeCurve"
+      (e) => e.target === nodeId && e.targetHandle === "easeCurve" && !e.data?.isLoop
     );
     if (easeCurveEdge) {
       const sourceNode = nodes.find((n) => n.id === easeCurveEdge.source);

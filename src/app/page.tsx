@@ -36,9 +36,9 @@ export default function Home() {
 
   // Client-side only FTUX check (SSR-safe)
   useEffect(() => {
-    // TODO: REVERT BEFORE PRODUCTION - Testing override to always show FTUX
-    setShowFTUX(true);
-    // Production code: if (!getFTUXCompleted()) { setShowFTUX(true); }
+    if (!getFTUXCompleted()) {
+      setShowFTUX(true);
+    }
   }, []);
 
   const handleFTUXComplete = () => {

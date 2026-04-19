@@ -106,7 +106,7 @@ export function FTUXModelDefaultsStep({}: FTUXStepProps) {
                 </>
               ) : (
                 <>
-                  <span className="text-xs text-neutral-400">Gemini nano-banana-pro</span>
+                  <span className="text-xs text-neutral-400">None set</span>
                   <button
                     type="button"
                     onClick={() => setShowImageDialog(true)}

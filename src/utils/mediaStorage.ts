@@ -455,7 +455,7 @@ async function externalizeNodeMedia(
 
       // Externalize gallery videos
       for (let i = 0; i < (d.videos?.length || 0); i++) {
-        const vid = d.videos[i];
+        const vid = d.videos![i];
         const existingRef = galleryVideoRefs[i];
         if (existingRef && isDataUrl(vid)) {
           // Already has ref, just keep it
@@ -480,12 +480,16 @@ async function externalizeNodeMedia(
       const hasImageRefs = galleryImageRefs.some(r => r && r !== "");
       const hasVideoRefs = galleryVideoRefs.some(r => r && r !== "");
 
+      // Trim refs to match actual array lengths (stale trailing entries after deletions)
+      const trimmedImageRefs = galleryImageRefs.slice(0, d.images?.length || 0);
+      const trimmedVideoRefs = galleryVideoRefs.slice(0, d.videos?.length || 0);
+
       newData = {
         ...d,
         images: cleanedImages,
-        imageRefs: hasImageRefs ? galleryImageRefs : undefined,
+        imageRefs: hasImageRefs ? trimmedImageRefs : undefined,
         videos: cleanedVideos,
-        videoRefs: hasVideoRefs ? galleryVideoRefs : undefined,
+        videoRefs: hasVideoRefs ? trimmedVideoRefs : undefined,
       };
       break;
     }
@@ -1084,9 +1088,9 @@ async function hydrateNodeMedia(
       newData = {
         ...d,
         images: filteredImages,
-        imageRefs: filteredImageRefs.some(r => r !== "") ? filteredImageRefs : d.imageRefs,
+        imageRefs: filteredImageRefs,
         videos: filteredVideos,
-        videoRefs: filteredVideoRefs.some(r => r !== "") ? filteredVideoRefs : d.videoRefs,
+        videoRefs: filteredVideoRefs,
       };
       break;
     }

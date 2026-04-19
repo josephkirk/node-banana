@@ -212,7 +212,6 @@ const initialTutorialSteps: TutorialStep[] = [
     waitForClick: true,
     links: [
       { text: "Join our Discord community", url: "https://discord.gg/node-banana" },
-      { text: "View documentation", url: "https://docs.nodebanana.com" },
     ],
     completed: false,
   },
@@ -240,15 +239,25 @@ export const useFTUXStore = create<FTUXState>((set, get) => ({
   loadTutorialSampleImage: async () => {
     try {
       const response = await fetch("/sample-images/owl.jpg");
+      if (!response.ok) {
+        console.error("Failed to load tutorial sample image: HTTP", response.status);
+        set({ tutorialSampleImage: null });
+        return;
+      }
       const blob = await response.blob();
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64 = reader.result as string;
         set({ tutorialSampleImage: base64 });
       };
+      reader.onerror = () => {
+        console.error("Failed to read tutorial sample image as data URL");
+        set({ tutorialSampleImage: null });
+      };
       reader.readAsDataURL(blob);
     } catch (error) {
       console.error("Failed to load tutorial sample image:", error);
+      set({ tutorialSampleImage: null });
     }
   },
 

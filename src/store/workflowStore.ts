@@ -1534,12 +1534,32 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
           }
         }
 
+        // Remap startLevel to prefixLevels and loopLevels indices
+        let prefixStartLevel = 0;
+        let loopStartLevel = -1;
+        if (startFromNodeId) {
+          const prefixIdx = prefixLevels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
+          const loopIdx = loopLevels.findIndex((l) => l.nodeIds.includes(startFromNodeId));
+
+          if (prefixIdx !== -1) {
+            prefixStartLevel = prefixIdx;
+          } else if (loopIdx !== -1) {
+            // Resume target is inside loop - start from that level on first iteration
+            loopStartLevel = loopIdx;
+          }
+        }
+
         // Execute prefix once
         logger.info('node.execution', 'Executing prefix levels', { count: prefixLevels.length });
-        await executeLevels(prefixLevels, startLevel);
+        await executeLevels(prefixLevels, prefixStartLevel);
 
         // Execute loop N times
-        const loopCount = loopEdge.data?.loopCount ?? 3;
+        // Normalize and clamp loopCount to handle malformed/imported values
+        const rawLoopCount = loopEdge.data?.loopCount ?? 3;
+        const parsed = Number(rawLoopCount);
+        const loopCount = Number.isFinite(parsed) && !isNaN(parsed)
+          ? Math.max(1, Math.min(100, parsed))
+          : 3;
         for (let i = 0; i < loopCount; i++) {
           if (abortController.signal.aborted || !get().isRunning) break;
 
@@ -1562,7 +1582,9 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
           logger.info('node.execution', `Loop iteration ${i + 1}/${loopCount}`);
 
           // Execute loop body + downstream levels with fresh node state
-          await executeLevels(loopLevels);
+          // On first iteration, use loopStartLevel if resuming from a node inside the loop
+          const startLevel = i === 0 && loopStartLevel !== -1 ? loopStartLevel : 0;
+          await executeLevels(loopLevels, startLevel);
         }
       }
 
@@ -1615,11 +1637,14 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
     const nanoBananaNode = nodes.find((n) => n.type === "nanoBanana");
     if (!nanoBananaNode) return;
 
+    const controller = new AbortController();
+    const { signal } = controller;
+
     // Set execution state
     set({
       isRunning: true,
       currentNodeIds: [nanoBananaNode.id],
-      _abortController: new AbortController(),
+      _abortController: controller,
     });
 
     // Set loading state (triggers edge animations)
@@ -1628,18 +1653,37 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       error: null,
     });
 
-    // Wait 5 seconds (realistic generation time)
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    // Cancellable 5-second delay
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, 5000);
+        signal.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
+      });
+    } catch {
+      // Aborted during wait — clean up and exit
+      updateNodeData(nanoBananaNode.id, { status: "idle", error: null });
+      set({ isRunning: false, currentNodeIds: [], _abortController: null });
+      return;
+    }
 
     // Load the mock output image
     const mockImageUrl = "/tutorial/owl-aviator.png";
     try {
-      const response = await fetch(mockImageUrl);
+      const response = await fetch(mockImageUrl, { signal });
+      if (!response.ok) throw new Error(`Failed to fetch tutorial image: ${response.status}`);
       const blob = await response.blob();
       const reader = new FileReader();
 
-      const base64Image = await new Promise<string>((resolve) => {
+      const base64Image = await new Promise<string>((resolve, reject) => {
+        signal.addEventListener("abort", () => {
+          reader.abort();
+          reject(new DOMException("Aborted", "AbortError"));
+        }, { once: true });
         reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
         reader.readAsDataURL(blob);
       });
 
@@ -1651,11 +1695,14 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         selectedHistoryIndex: 0,
       });
     } catch (error) {
-      // Fallback to error state if image not found
-      updateNodeData(nanoBananaNode.id, {
-        status: "error",
-        error: "Failed to load tutorial image",
-      });
+      if (error instanceof DOMException && error.name === "AbortError") {
+        updateNodeData(nanoBananaNode.id, { status: "idle", error: null });
+      } else {
+        updateNodeData(nanoBananaNode.id, {
+          status: "error",
+          error: "Failed to load tutorial image",
+        });
+      }
     }
 
     // Clear execution state
@@ -2137,6 +2184,12 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
     if (edgeById.size < workflow.edges.length) {
       workflow.edges = Array.from(edgeById.values());
     }
+
+    // Filter orphaned edges referencing non-existent nodes
+    const nodeIds = new Set(workflow.nodes.map((n) => n.id));
+    workflow.edges = workflow.edges.filter(
+      (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    );
 
     // Look up saved config from localStorage (only if workflow has an ID)
     const configs = loadSaveConfigs();

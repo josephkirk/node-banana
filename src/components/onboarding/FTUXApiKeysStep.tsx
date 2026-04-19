@@ -75,6 +75,7 @@ const providers: ProviderInfo[] = [
 
 export function FTUXApiKeysStep({}: FTUXStepProps) {
   const updateProviderApiKey = useWorkflowStore((state) => state.updateProviderApiKey);
+  const providerSettings = useWorkflowStore((state) => state.providerSettings);
   const [envStatus, setEnvStatus] = useState<EnvStatusResponse | null>(null);
   const [showKey, setShowKey] = useState<Record<ProviderType, boolean>>({
     gemini: false,
@@ -85,14 +86,21 @@ export function FTUXApiKeysStep({}: FTUXStepProps) {
     kie: false,
     wavespeed: false,
   });
-  const [localKeys, setLocalKeys] = useState<Record<ProviderType, string>>({
-    gemini: "",
-    openai: "",
-    anthropic: "",
-    replicate: "",
-    fal: "",
-    kie: "",
-    wavespeed: "",
+  const [localKeys, setLocalKeys] = useState<Record<ProviderType, string>>(() => {
+    const keys: Record<ProviderType, string> = {
+      gemini: "",
+      openai: "",
+      anthropic: "",
+      replicate: "",
+      fal: "",
+      kie: "",
+      wavespeed: "",
+    };
+    for (const id of Object.keys(keys) as ProviderType[]) {
+      const saved = providerSettings.providers[id]?.apiKey;
+      if (saved) keys[id] = saved;
+    }
+    return keys;
   });
 
   useEffect(() => {
