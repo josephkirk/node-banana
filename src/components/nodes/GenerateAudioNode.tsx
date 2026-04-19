@@ -229,8 +229,9 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
     if (!nodeData.inputSchema || nodeData.inputSchema.length === 0) return null;
 
     return nodeData.inputSchema.map((input, index) => {
-      const handleType = input.type === "image" ? "image" : "text";
+      const handleType = input.type === "image" ? "image" : input.type === "audio" ? "audio" : "text";
       const topPx = 50 + (index - nodeData.inputSchema!.length / 2 + 0.5) * 20;
+      const handleColor = handleType === "image" ? "var(--handle-color-image)" : handleType === "audio" ? "var(--handle-color-audio)" : "var(--handle-color-text)";
       return (
         <React.Fragment key={input.name}>
           <Handle
@@ -238,13 +239,10 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
             position={Position.Left}
             id={input.name}
             data-handletype={handleType}
-            style={{
-              background: handleType === "image" ? "rgb(34, 197, 94)" : "rgb(251, 191, 36)",
-              top: `${topPx}px`,
-            }}
+            style={{ top: `${topPx}px` }}
             title={input.label}
           />
-          <HandleLabel label={input.label} side="target" color={handleType === "image" ? "var(--handle-color-image)" : "var(--handle-color-text)"} top={`${topPx - 18}px`} visible={showLabels} />
+          <HandleLabel label={input.label} side="target" color={handleColor} top={`${topPx - 18}px`} visible={showLabels} />
         </React.Fragment>
       );
     });
