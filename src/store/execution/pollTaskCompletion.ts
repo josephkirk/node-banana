@@ -87,10 +87,10 @@ export async function pollGenerateTask(
     }
 
     if (!response.ok) {
-      // Server errors during polling may be transient
-      if (response.status >= 500) {
+      // Server errors and transient HTTP statuses may be retried
+      if (response.status >= 500 || response.status === 429 || response.status === 408) {
         consecutiveErrors++;
-        console.warn(`[poll] Server error ${response.status} (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
+        console.warn(`[poll] Transient error ${response.status} (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS})`);
         if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
           const errorText = await response.text().catch(() => "");
           return { success: false, error: `${modelName}: Polling failed - ${errorText || `HTTP ${response.status}`}` };
@@ -99,7 +99,7 @@ export async function pollGenerateTask(
         continue;
       }
 
-      // 4xx errors are not recoverable
+      // Other 4xx errors are not recoverable
       const errorText = await response.text().catch(() => "");
       let errorMessage = `HTTP ${response.status}`;
       try {

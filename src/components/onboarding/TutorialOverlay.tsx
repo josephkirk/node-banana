@@ -165,7 +165,17 @@ export function TutorialOverlay() {
     }
   }, [tutorialActive, currentTutorialStep, tutorialSteps]);
 
-  // Auto-populate nodes during the populate-content step
+  // Reset populate ref when tutorial ends
+  useEffect(() => {
+    if (!tutorialActive) {
+      nodesPopulated.current = false;
+    }
+  }, [tutorialActive]);
+
+  // Auto-populate nodes during the populate-content step.
+  // Reads nodes from the store directly (via getState) to avoid depending on
+  // `nodes` — which would retrigger the effect and clear the advance timer
+  // when updateNodeData mutates node data.
   useEffect(() => {
     if (!tutorialActive || nodesPopulated.current) {
       return;
@@ -181,9 +191,10 @@ export function TutorialOverlay() {
 
       // Wait a bit before populating to show the message first
       timeoutIds.push(setTimeout(() => {
-        // Find the image input and prompt nodes
-        const imageInputNode = nodes.find((node) => node.type === "imageInput");
-        const promptNode = nodes.find((node) => node.type === "prompt");
+        // Read nodes from the store directly to avoid dependency on `nodes`
+        const currentNodes = useWorkflowStore.getState().nodes;
+        const imageInputNode = currentNodes.find((node) => node.type === "imageInput");
+        const promptNode = currentNodes.find((node) => node.type === "prompt");
 
         // Populate with sample content
         if (imageInputNode) {
@@ -212,12 +223,14 @@ export function TutorialOverlay() {
         timeoutIds.length = 0;
       };
     }
+  }, [tutorialActive, currentTutorialStep, tutorialSteps, tutorialSampleImage, updateNodeData, completeCurrentStep, nextTutorialStep]);
 
-    // Reset ref when tutorial ends
+  // Reset demonstrate ref when tutorial ends
+  useEffect(() => {
     if (!tutorialActive) {
-      nodesPopulated.current = false;
+      demonstrateNodesAdded.current = false;
     }
-  }, [tutorialActive, currentTutorialStep, tutorialSteps, nodes, tutorialSampleImage, updateNodeData, completeCurrentStep, nextTutorialStep]);
+  }, [tutorialActive]);
 
   // Auto-add downstream demonstration nodes
   useEffect(() => {
@@ -229,9 +242,10 @@ export function TutorialOverlay() {
 
     if (currentStep?.id === "demonstrate-downstream" && !currentStep.completed) {
       demonstrateNodesAdded.current = true;
-      const addNode = useWorkflowStore.getState().addNode;
-      const onConnect = useWorkflowStore.getState().onConnect;
-      const updateNodeData = useWorkflowStore.getState().updateNodeData;
+      const storeState = useWorkflowStore.getState();
+      const addNode = storeState.addNode;
+      const onConnect = storeState.onConnect;
+      const updateNodeData = storeState.updateNodeData;
 
       // Track all timeouts so cleanup can clear them if tutorial is skipped
       const timeoutIds = demonstrateTimeoutIds.current;
@@ -242,8 +256,10 @@ export function TutorialOverlay() {
 
       // Initial delay to show message
       schedule(() => {
+        // Read nodes from the store directly to avoid dependency on `nodes`
+        const currentNodes = useWorkflowStore.getState().nodes;
         // Find the Generate Image node
-        const generateNode = nodes.find((n) => n.type === "nanoBanana");
+        const generateNode = currentNodes.find((n) => n.type === "nanoBanana");
         if (!generateNode) return;
 
         const baseX = generateNode.position.x;
@@ -412,12 +428,7 @@ export function TutorialOverlay() {
         timeoutIds.length = 0;
       };
     }
-
-    // Reset ref when tutorial ends
-    if (!tutorialActive) {
-      demonstrateNodesAdded.current = false;
-    }
-  }, [tutorialActive, currentTutorialStep, tutorialSteps, nodes, completeCurrentStep, nextTutorialStep]);
+  }, [tutorialActive, currentTutorialStep, tutorialSteps, completeCurrentStep, nextTutorialStep]);
 
   // Don't render during SSR or when tutorial is inactive
   if (!mounted || !tutorialActive || currentTutorialStep >= tutorialSteps.length) {
@@ -436,7 +447,16 @@ export function TutorialOverlay() {
       {/* Click-to-continue overlay (when waitForClick is true) */}
       {currentStep.waitForClick && (
         <div
+          role="button"
+          tabIndex={0}
           onClick={handleContinue}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleContinue();
+            }
+          }}
+          aria-label="Click to continue tutorial"
           className="fixed inset-0 cursor-pointer"
           style={{ zIndex: 92 }}
         />

@@ -220,6 +220,6 @@ export async function executeGenerate3D(
     fallbackParameters: nodeData.fallbackParameters,
     updateNodeData,
     runOnce,
-    clearOutput: { output3dUrl: null },
+    clearOutput: { output3dUrl: null, savedFilename: null, savedFilePath: null },
   });
 }

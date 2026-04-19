@@ -29,11 +29,12 @@ import {
 
 const determineEncodeParameters = async (
   blobs: Blob[]
-): Promise<{ width: number; height: number; rotation: Rotation; maxSourceBitrate: number; totalDuration: number }> => {
+): Promise<{ width: number; height: number; rotation: Rotation; maxSourceBitrate: number; totalDuration: number; probeSuccessCount: number }> => {
   let maxWidth = 0;
   let maxHeight = 0;
   let maxSourceBitrate = 0;
   let totalDuration = 0;
+  let probeSuccessCount = 0;
   let rotation: Rotation | null = null;
 
   for (let i = 0; i < blobs.length; i++) {
@@ -43,6 +44,7 @@ const determineEncodeParameters = async (
       maxHeight = Math.max(maxHeight, height);
       maxSourceBitrate = Math.max(maxSourceBitrate, bitrate);
       totalDuration += duration;
+      probeSuccessCount++;
       if (rotation === null) {
         rotation = trackRotation;
       } else if (trackRotation !== rotation) {
@@ -62,6 +64,7 @@ const determineEncodeParameters = async (
       rotation: rotation ?? (0 as Rotation),
       maxSourceBitrate,
       totalDuration,
+      probeSuccessCount,
     };
   }
 
@@ -71,6 +74,7 @@ const determineEncodeParameters = async (
     rotation: rotation ?? (0 as Rotation),
     maxSourceBitrate,
     totalDuration,
+    probeSuccessCount,
   };
 };
 
@@ -175,6 +179,7 @@ export async function stitchVideosAsync(
       rotation: aggregateRotation,
       maxSourceBitrate,
       totalDuration: probedVideoDuration,
+      probeSuccessCount,
     } = await determineEncodeParameters(videoBlobs);
 
     const safeWidth = probedWidth > 0 ? probedWidth : FALLBACK_WIDTH;
@@ -216,7 +221,9 @@ export async function stitchVideosAsync(
     let effectiveAudioData = audioData ?? null;
     if (!effectiveAudioData) {
       updateProgress('processing', 'Extracting audio from source videos...', 8);
-      const allAudioBuffers: AudioBuffer[] = [];
+      // Per-clip audio: each entry is either extracted buffers or a pending
+      // duration (seconds) for clips before the reference format is known.
+      const perClipAudio: Array<{ buffers: AudioBuffer[] } | { silentDuration: number }> = [];
       let referenceSampleRate: number | null = null;
       let referenceChannels: number | null = null;
 
@@ -231,6 +238,7 @@ export async function stitchVideosAsync(
             if (audioTracks.length > 0) {
               const audioTrack = audioTracks[0];
               const sink = new AudioBufferSink(audioTrack);
+              const clipBuffers: AudioBuffer[] = [];
               for await (const wrapped of sink.buffers(0, clipDuration)) {
                 if (referenceSampleRate === null) {
                   referenceSampleRate = wrapped.buffer.sampleRate;
@@ -240,21 +248,18 @@ export async function stitchVideosAsync(
                   wrapped.buffer.sampleRate === referenceSampleRate &&
                   wrapped.buffer.numberOfChannels === referenceChannels
                 ) {
-                  allAudioBuffers.push(wrapped.buffer);
+                  clipBuffers.push(wrapped.buffer);
                   extractedAudio = true;
                 }
               }
+              if (extractedAudio) {
+                perClipAudio.push({ buffers: clipBuffers });
+              }
             }
-            // If no audio was extracted (no tracks or incompatible params),
-            // push a silent buffer to maintain timeline alignment
-            if (!extractedAudio && referenceSampleRate && referenceChannels && clipDuration > 0) {
-              const silentSamples = Math.max(1, Math.floor(clipDuration * referenceSampleRate));
-              const silentBuffer = new AudioBuffer({
-                length: silentSamples,
-                numberOfChannels: referenceChannels,
-                sampleRate: referenceSampleRate,
-              });
-              allAudioBuffers.push(silentBuffer);
+            // If no audio was extracted, record the clip's duration so we can
+            // insert silence later (even before the reference format is known).
+            if (!extractedAudio && clipDuration > 0) {
+              perClipAudio.push({ silentDuration: clipDuration });
             }
           } finally {
             input.dispose();
@@ -264,26 +269,46 @@ export async function stitchVideosAsync(
         }
       }
 
-      if (allAudioBuffers.length > 0 && referenceSampleRate && referenceChannels) {
-        const totalSamples = allAudioBuffers.reduce((sum, b) => sum + b.length, 0);
-        const concatenated = new AudioBuffer({
-          length: Math.max(1, totalSamples),
-          numberOfChannels: referenceChannels,
-          sampleRate: referenceSampleRate,
-        });
-
-        let offset = 0;
-        for (const buffer of allAudioBuffers) {
-          for (let ch = 0; ch < referenceChannels; ch++) {
-            concatenated.getChannelData(ch).set(buffer.getChannelData(ch), offset);
+      // Build the final concatenated buffer, resolving deferred silent entries
+      // now that the reference format is established.
+      if (referenceSampleRate && referenceChannels) {
+        const allAudioBuffers: AudioBuffer[] = [];
+        for (const entry of perClipAudio) {
+          if ('buffers' in entry) {
+            allAudioBuffers.push(...entry.buffers);
+          } else {
+            // Deferred silent clip — create a silent buffer with the reference format
+            const silentSamples = Math.max(1, Math.floor(entry.silentDuration * referenceSampleRate));
+            const silentBuffer = new AudioBuffer({
+              length: silentSamples,
+              numberOfChannels: referenceChannels,
+              sampleRate: referenceSampleRate,
+            });
+            allAudioBuffers.push(silentBuffer);
           }
-          offset += buffer.length;
         }
 
-        effectiveAudioData = {
-          buffer: concatenated,
-          duration: totalSamples / referenceSampleRate,
-        };
+        if (allAudioBuffers.length > 0) {
+          const totalSamples = allAudioBuffers.reduce((sum, b) => sum + b.length, 0);
+          const concatenated = new AudioBuffer({
+            length: Math.max(1, totalSamples),
+            numberOfChannels: referenceChannels,
+            sampleRate: referenceSampleRate,
+          });
+
+          let offset = 0;
+          for (const buffer of allAudioBuffers) {
+            for (let ch = 0; ch < referenceChannels; ch++) {
+              concatenated.getChannelData(ch).set(buffer.getChannelData(ch), offset);
+            }
+            offset += buffer.length;
+          }
+
+          effectiveAudioData = {
+            buffer: concatenated,
+            duration: totalSamples / referenceSampleRate,
+          };
+        }
       }
     }
 
@@ -343,7 +368,10 @@ export async function stitchVideosAsync(
     // Writing audio after all video causes broken interleaving (Discord won't play audio).
     if (audioSource && pendingAudioBuffer) {
       updateProgress('processing', 'Encoding audio track...', 12);
-      const trimTarget = probedVideoDuration > 0 ? probedVideoDuration : effectiveAudioData!.duration;
+      // Only trust probedVideoDuration when all blobs were successfully probed;
+      // a partial sum would prematurely trim the audio track.
+      const allProbed = probeSuccessCount === videoBlobs.length;
+      const trimTarget = allProbed && probedVideoDuration > 0 ? probedVideoDuration : effectiveAudioData!.duration;
       const trimmedBuffer = trimAudioBuffer(pendingAudioBuffer, trimTarget);
       await audioSource.add(trimmedBuffer);
       await audioSource.close();
