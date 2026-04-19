@@ -7,6 +7,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { VideoInputNodeData } from "@/types";
 import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 type VideoInputNodeType = Node<VideoInputNodeData, "videoInput">;
 
@@ -18,6 +19,7 @@ export function VideoInputNode({ id, data, selected }: NodeProps<VideoInputNodeT
   const nodeData = data;
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const showLabels = useShowHandleLabels(selected);
 
   // Use blob URL for efficient playback of large base64 videos
   const playbackUrl = useVideoBlobUrl(nodeData.video ?? null);
@@ -182,12 +184,38 @@ export function VideoInputNode({ id, data, selected }: NodeProps<VideoInputNodeT
         id="video"
         data-handletype="video"
       />
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+          style={{
+            right: "calc(100% + 8px)",
+            top: "calc(50% - 18px)",
+            color: "var(--handle-color-video)",
+            zIndex: 10,
+          }}
+        >
+          Video
+        </div>
+      )}
       <Handle
         type="source"
         position={Position.Right}
         id="video"
         data-handletype="video"
       />
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{
+            left: "calc(100% + 8px)",
+            top: "calc(50% - 18px)",
+            color: "var(--handle-color-video)",
+            zIndex: 10,
+          }}
+        >
+          Video
+        </div>
+      )}
     </BaseNode>
   );
 }

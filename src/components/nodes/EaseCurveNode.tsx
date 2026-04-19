@@ -8,6 +8,7 @@ import { EaseCurveNodeData } from "@/types";
 import { checkEncoderSupport } from "@/hooks/useStitchVideos";
 import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 type EaseCurveNodeType = Node<EaseCurveNodeData, "easeCurve">;
 
@@ -20,6 +21,7 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
   const removeEdge = useWorkflowStore((state) => state.removeEdge);
   const videoBlobUrl = useVideoBlobUrl(nodeData.outputVideo ?? null);
   const videoAutoplayRef = useVideoAutoplay(id, selected);
+  const showLabels = useShowHandleLabels(selected);
 
   // Check encoder support on mount
   useEffect(() => {
@@ -54,12 +56,14 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "35%" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{ right: "calc(100% + 8px)", top: "calc(35% - 7px)", color: "rgb(168, 85, 247)" }}
-      >
-        Video In
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+          style={{ right: "calc(100% + 8px)", top: "calc(35% - 7px)", color: "rgb(168, 85, 247)" }}
+        >
+          Video In
+        </div>
+      )}
 
       {/* Video Out (source, right, 35%) */}
       <Handle
@@ -70,12 +74,14 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "35%" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{ left: "calc(100% + 8px)", top: "calc(35% - 7px)", color: "rgb(168, 85, 247)" }}
-      >
-        Video Out
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{ left: "calc(100% + 8px)", top: "calc(35% - 7px)", color: "rgb(168, 85, 247)" }}
+        >
+          Video Out
+        </div>
+      )}
 
       {/* Settings In (target, left, 75%) */}
       <Handle
@@ -86,12 +92,14 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "75%", background: "rgb(190, 242, 100)" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{ right: "calc(100% + 8px)", top: "calc(75% - 7px)", color: "rgb(190, 242, 100)" }}
-      >
-        Settings
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+          style={{ right: "calc(100% + 8px)", top: "calc(75% - 7px)", color: "rgb(190, 242, 100)" }}
+        >
+          Settings
+        </div>
+      )}
 
       {/* Settings Out (source, right, 75%) */}
       <Handle
@@ -102,12 +110,14 @@ export function EaseCurveNode({ id, data, selected }: NodeProps<EaseCurveNodeTyp
         isConnectable={true}
         style={{ top: "75%", background: "rgb(190, 242, 100)" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{ left: "calc(100% + 8px)", top: "calc(75% - 7px)", color: "rgb(190, 242, 100)" }}
-      >
-        Settings
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{ left: "calc(100% + 8px)", top: "calc(75% - 7px)", color: "rgb(190, 242, 100)" }}
+        >
+          Settings
+        </div>
+      )}
     </>
   );
 

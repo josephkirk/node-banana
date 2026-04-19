@@ -15,6 +15,7 @@ import { useInlineParameters } from "@/hooks/useInlineParameters";
 import { InlineParameterPanel } from "./InlineParameterPanel";
 import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 // 3D generation capabilities
 const THREE_D_CAPABILITIES: ModelCapability[] = ["text-to-3d", "image-to-3d"];
@@ -36,6 +37,7 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
 
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
+  const showLabels = useShowHandleLabels(selected);
 
   // Register browse callback for floating header button
   useEffect(() => {
@@ -287,17 +289,19 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
                   isConnectable={true}
                   title={handle.description || handle.label}
                 />
-                <div
-                  className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-                  style={{
-                    right: `calc(100% + 8px)`,
-                    top: `calc(${topPercent}% - 18px)`,
-                    color: isImage ? "var(--handle-color-image)" : "var(--handle-color-text)",
-                    opacity: handle.isPlaceholder ? 0.3 : 1,
-                  }}
-                >
-                  {handle.label}
-                </div>
+                {showLabels && (
+                  <div
+                    className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+                    style={{
+                      right: `calc(100% + 8px)`,
+                      top: `calc(${topPercent}% - 18px)`,
+                      color: isImage ? "var(--handle-color-image)" : "var(--handle-color-text)",
+                      opacity: handle.isPlaceholder ? 0.3 : 1,
+                    }}
+                  >
+                    {handle.label}
+                  </div>
+                )}
               </React.Fragment>
             );
           });
@@ -337,16 +341,18 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
             data-handletype="image"
             isConnectable={true}
           />
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: `calc(100% + 8px)`,
-              top: "calc(35% - 18px)",
-              color: "var(--handle-color-image)",
-            }}
-          >
-            Image
-          </div>
+          {showLabels && (
+            <div
+              className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+              style={{
+                right: `calc(100% + 8px)`,
+                top: "calc(35% - 18px)",
+                color: "var(--handle-color-image)",
+              }}
+            >
+              Image
+            </div>
+          )}
           <Handle
             type="target"
             position={Position.Left}
@@ -354,16 +360,18 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
             style={{ top: "65%" }}
             data-handletype="text"
           />
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: `calc(100% + 8px)`,
-              top: "calc(65% - 18px)",
-              color: "var(--handle-color-text)",
-            }}
-          >
-            Prompt
-          </div>
+          {showLabels && (
+            <div
+              className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+              style={{
+                right: `calc(100% + 8px)`,
+                top: "calc(65% - 18px)",
+                color: "var(--handle-color-text)",
+              }}
+            >
+              Prompt
+            </div>
+          )}
         </>
       )}
 
@@ -375,16 +383,18 @@ export function Generate3DNode({ id, data, selected }: NodeProps<Generate3DNodeT
         data-handletype="3d"
       />
       {/* Output label */}
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{
-          left: `calc(100% + 8px)`,
-          top: "calc(50% - 18px)",
-          color: "var(--handle-color-3d)",
-        }}
-      >
-        3D
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{
+            left: `calc(100% + 8px)`,
+            top: "calc(50% - 18px)",
+            color: "var(--handle-color-3d)",
+          }}
+        >
+          3D
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col min-h-0 gap-2">
         {/* Preview area */}

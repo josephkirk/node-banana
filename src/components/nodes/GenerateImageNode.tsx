@@ -18,6 +18,7 @@ import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 /** Reorder items so they read column-first in a row-based CSS grid.
  *  e.g. [1,2,3,4,5,6,7,8] with 2 cols → [1,5,2,6,3,7,4,8] */
@@ -77,6 +78,7 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
 
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
+  const showLabels = useShowHandleLabels(selected);
 
   // Register browse callback for floating header button
   useEffect(() => {
@@ -669,17 +671,19 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
         isConnectable={true}
       />
       {/* Image label */}
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{
-          right: `calc(100% + 8px)`,
-          top: "calc(35% - 18px)",
-          color: "var(--handle-color-image)",
-          zIndex: 10,
-        }}
-      >
-        Image
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+          style={{
+            right: `calc(100% + 8px)`,
+            top: "calc(35% - 18px)",
+            color: "var(--handle-color-image)",
+            zIndex: 10,
+          }}
+        >
+          Image
+        </div>
+      )}
       <Handle
         type="target"
         position={Position.Left}
@@ -690,17 +694,19 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
         isConnectable={true}
       />
       {/* Prompt label */}
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{
-          right: `calc(100% + 8px)`,
-          top: "calc(65% - 18px)",
-          color: "var(--handle-color-text)",
-          zIndex: 10,
-        }}
-      >
-        Prompt
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+          style={{
+            right: `calc(100% + 8px)`,
+            top: "calc(65% - 18px)",
+            color: "var(--handle-color-text)",
+            zIndex: 10,
+          }}
+        >
+          Prompt
+        </div>
+      )}
       {/* Output handle */}
       <Handle
         type="source"
@@ -710,17 +716,19 @@ export function GenerateImageNode({ id, data, selected }: NodeProps<NanoBananaNo
         data-handletype="image"
       />
       {/* Output label */}
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{
-          left: `calc(100% + 8px)`,
-          top: "calc(50% - 18px)",
-          color: "var(--handle-color-image)",
-          zIndex: 10,
-        }}
-      >
-        Image
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{
+            left: `calc(100% + 8px)`,
+            top: "calc(50% - 18px)",
+            color: "var(--handle-color-image)",
+            zIndex: 10,
+          }}
+        >
+          Image
+        </div>
+      )}
 
       <div
         className="relative w-full h-full min-h-0 overflow-hidden rounded-lg"

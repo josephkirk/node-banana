@@ -9,6 +9,7 @@ import { OutputGalleryNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { defaultNodeDimensions } from "@/store/utils/nodeDefaults";
 import { downloadMedia as downloadMediaUtil } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 type MediaItem = { type: "image" | "video"; src: string };
 
@@ -31,6 +32,7 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
   const addNode = useWorkflowStore((state) => state.addNode);
   const { getNodes, setNodes } = useReactFlow();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const showLabels = useShowHandleLabels(selected);
 
   // Display stored media only — items are accumulated during workflow execution
   const displayMedia = useMemo(() => {
@@ -185,12 +187,14 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
           data-handletype="image"
           style={{ top: "40%" }}
         />
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{ right: "calc(100% + 8px)", top: "calc(40% - 18px)", color: "rgb(59, 130, 246)" }}
-        >
-          Image
-        </div>
+        {showLabels && (
+          <div
+            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+            style={{ right: "calc(100% + 8px)", top: "calc(40% - 18px)", color: "rgb(59, 130, 246)" }}
+          >
+            Image
+          </div>
+        )}
 
         <Handle
           type="target"
@@ -199,12 +203,14 @@ export function OutputGalleryNode({ id, data, selected }: NodeProps<OutputGaller
           data-handletype="video"
           style={{ top: "60%" }}
         />
-        <div
-          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-          style={{ right: "calc(100% + 8px)", top: "calc(60% - 18px)", color: "rgb(168, 85, 247)" }}
-        >
-          Video
-        </div>
+        {showLabels && (
+          <div
+            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+            style={{ right: "calc(100% + 8px)", top: "calc(60% - 18px)", color: "rgb(168, 85, 247)" }}
+          >
+            Video
+          </div>
+        )}
 
         {displayMedia.length > 0 && (
           <div className="flex items-center justify-between px-2 py-1">

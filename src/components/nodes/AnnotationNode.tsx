@@ -8,6 +8,7 @@ import { useWorkflowStore } from "@/store/workflowStore";
 import { AnnotationNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 type AnnotationNodeType = Node<AnnotationNodeData, "annotation">;
 
@@ -16,6 +17,7 @@ export function AnnotationNode({ id, data, selected }: NodeProps<AnnotationNodeT
   const openModal = useAnnotationStore((state) => state.openModal);
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const showLabels = useShowHandleLabels(selected);
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -114,12 +116,38 @@ export function AnnotationNode({ id, data, selected }: NodeProps<AnnotationNodeT
         id="image"
         data-handletype="image"
       />
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+          style={{
+            right: "calc(100% + 8px)",
+            top: "calc(50% - 18px)",
+            color: "var(--handle-color-image)",
+            zIndex: 10,
+          }}
+        >
+          Image
+        </div>
+      )}
       <Handle
         type="source"
         position={Position.Right}
         id="image"
         data-handletype="image"
       />
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{
+            left: "calc(100% + 8px)",
+            top: "calc(50% - 18px)",
+            color: "var(--handle-color-image)",
+            zIndex: 10,
+          }}
+        >
+          Image
+        </div>
+      )}
 
       {displayImage ? (
         <div

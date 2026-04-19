@@ -8,6 +8,7 @@ import { VideoStitchNodeData } from "@/types";
 import { checkEncoderSupport } from "@/hooks/useStitchVideos";
 import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 type VideoStitchNodeType = Node<VideoStitchNodeData, "videoStitch">;
 
@@ -22,6 +23,7 @@ export function VideoStitchNode({ id, data, selected }: NodeProps<VideoStitchNod
   const removeEdge = useWorkflowStore((state) => state.removeEdge);
   const videoBlobUrl = useVideoBlobUrl(nodeData.outputVideo ?? null);
   const videoAutoplayRef = useVideoAutoplay(id, selected);
+  const showLabels = useShowHandleLabels(selected);
 
   // Check encoder support on mount
   useEffect(() => {
@@ -312,16 +314,18 @@ export function VideoStitchNode({ id, data, selected }: NodeProps<VideoStitchNod
               isConnectable={true}
               style={{ top: `${topPercent}%` }}
             />
-            <div
-              className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-              style={{
-                right: `calc(100% + 8px)`,
-                top: `calc(${topPercent}% - 9px)`,
-                color: "rgb(96, 165, 250)",
-              }}
-            >
-              Video {index + 1}
-            </div>
+            {showLabels && (
+              <div
+                className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+                style={{
+                  right: `calc(100% + 8px)`,
+                  top: `calc(${topPercent}% - 9px)`,
+                  color: "rgb(96, 165, 250)",
+                }}
+              >
+                Video {index + 1}
+              </div>
+            )}
           </React.Fragment>
         );
       })}
@@ -335,16 +339,18 @@ export function VideoStitchNode({ id, data, selected }: NodeProps<VideoStitchNod
         isConnectable={true}
         style={{ top: "90%", background: "rgb(167, 139, 250)" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{
-          right: `calc(100% + 8px)`,
-          top: "calc(90% - 18px)",
-          color: "rgb(167, 139, 250)",
-        }}
-      >
-        Audio
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+          style={{
+            right: `calc(100% + 8px)`,
+            top: "calc(90% - 18px)",
+            color: "rgb(167, 139, 250)",
+          }}
+        >
+          Audio
+        </div>
+      )}
 
       {/* Video output handle (right side) */}
       <Handle
@@ -354,16 +360,18 @@ export function VideoStitchNode({ id, data, selected }: NodeProps<VideoStitchNod
         data-handletype="video"
         isConnectable={true}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{
-          left: `calc(100% + 8px)`,
-          top: "calc(50% - 9px)",
-          color: "rgb(96, 165, 250)",
-        }}
-      >
-        Output
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{
+            left: `calc(100% + 8px)`,
+            top: "calc(50% - 9px)",
+            color: "rgb(96, 165, 250)",
+          }}
+        >
+          Output
+        </div>
+      )}
     </>
   );
 

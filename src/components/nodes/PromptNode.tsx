@@ -6,6 +6,7 @@ import { Handle, Position, NodeProps, Node } from "@xyflow/react";
 import { BaseNode } from "./BaseNode";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { PromptNodeData } from "@/types";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 type PromptNodeType = Node<PromptNodeData, "prompt">;
 
@@ -14,6 +15,7 @@ export function PromptNode({ id, data, selected }: NodeProps<PromptNodeType>) {
   const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const getConnectedInputs = useWorkflowStore((state) => state.getConnectedInputs);
   const edges = useWorkflowStore((state) => state.edges);
+  const showLabels = useShowHandleLabels(selected);
 
   // Local state for prompt to prevent cursor jumping during typing
   const [localPrompt, setLocalPrompt] = useState(nodeData.prompt);
@@ -103,6 +105,19 @@ export function PromptNode({ id, data, selected }: NodeProps<PromptNodeType>) {
           data-handletype="text"
           style={{ zIndex: 10 }}
         />
+        {showLabels && (
+          <div
+            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+            style={{
+              right: "calc(100% + 8px)",
+              top: "calc(50% - 18px)",
+              color: "var(--handle-color-text)",
+              zIndex: 10,
+            }}
+          >
+            Text
+          </div>
+        )}
 
         <textarea
           value={localPrompt}
@@ -131,6 +146,19 @@ export function PromptNode({ id, data, selected }: NodeProps<PromptNodeType>) {
           data-tutorial="prompt-output-handle"
           style={{ zIndex: 10 }}
         />
+        {showLabels && (
+          <div
+            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+            style={{
+              left: "calc(100% + 8px)",
+              top: "calc(50% - 18px)",
+              color: "var(--handle-color-text)",
+              zIndex: 10,
+            }}
+          >
+            Text
+          </div>
+        )}
       </BaseNode>
 
       {/* Variable Naming Dialog - rendered via portal */}

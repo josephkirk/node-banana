@@ -6,6 +6,7 @@ import { BaseNode } from "./BaseNode";
 import { useWorkflowStore } from "@/store/workflowStore";
 import { VideoFrameGrabNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 type VideoFrameGrabNodeType = Node<VideoFrameGrabNodeData, "videoFrameGrab">;
 
@@ -17,6 +18,7 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
   const isRunning = useWorkflowStore((state) => state.isRunning);
   const edges = useWorkflowStore((state) => state.edges);
   const nodes = useWorkflowStore((state) => state.nodes);
+  const showLabels = useShowHandleLabels(selected);
 
   // Find connected source video from incoming edges
   const sourceVideoUrl = useMemo(() => {
@@ -56,12 +58,14 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{ right: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(168, 85, 247)" }}
-      >
-        Video In
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+          style={{ right: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(168, 85, 247)" }}
+        >
+          Video In
+        </div>
+      )}
 
       {/* Image Out (source, right, 50%) */}
       <Handle
@@ -72,12 +76,14 @@ export function VideoFrameGrabNode({ id, data, selected }: NodeProps<VideoFrameG
         isConnectable={true}
         style={{ top: "50%" }}
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{ left: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(59, 130, 246)" }}
-      >
-        Image Out
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{ left: "calc(100% + 8px)", top: "calc(50% - 7px)", color: "rgb(59, 130, 246)" }}
+        >
+          Image Out
+        </div>
+      )}
 
       <div className="flex-1 flex flex-col min-h-0 gap-2">
         {/* Image preview area */}

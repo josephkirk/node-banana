@@ -16,6 +16,7 @@ import { InlineParameterPanel } from "./InlineParameterPanel";
 import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 type GenerateAudioNodeType = Node<GenerateAudioNodeData, "generateAudio">;
 
@@ -35,6 +36,7 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
 
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
+  const showLabels = useShowHandleLabels(selected);
 
   // Register browse callback for floating header button
   useEffect(() => {
@@ -227,19 +229,34 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
 
     return nodeData.inputSchema.map((input, index) => {
       const handleType = input.type === "image" ? "image" : "text";
+      const topPx = 50 + (index - nodeData.inputSchema!.length / 2 + 0.5) * 20;
       return (
-        <Handle
-          key={input.name}
-          type="target"
-          position={Position.Left}
-          id={input.name}
-          data-handletype={handleType}
-          style={{
-            background: handleType === "image" ? "rgb(34, 197, 94)" : "rgb(251, 191, 36)",
-            top: `${50 + (index - nodeData.inputSchema!.length / 2 + 0.5) * 20}px`,
-          }}
-          title={input.label}
-        />
+        <React.Fragment key={input.name}>
+          <Handle
+            type="target"
+            position={Position.Left}
+            id={input.name}
+            data-handletype={handleType}
+            style={{
+              background: handleType === "image" ? "rgb(34, 197, 94)" : "rgb(251, 191, 36)",
+              top: `${topPx}px`,
+            }}
+            title={input.label}
+          />
+          {showLabels && (
+            <div
+              className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+              style={{
+                right: "calc(100% + 8px)",
+                top: `${topPx - 18}px`,
+                color: handleType === "image" ? "var(--handle-color-image)" : "var(--handle-color-text)",
+                zIndex: 10,
+              }}
+            >
+              {input.label}
+            </div>
+          )}
+        </React.Fragment>
       );
     });
   }, [nodeData.inputSchema]);
@@ -480,6 +497,19 @@ export function GenerateAudioNode({ id, data, selected }: NodeProps<GenerateAudi
           data-handletype="audio"
           style={{ background: "rgb(167, 139, 250)" }}
         />
+        {showLabels && (
+          <div
+            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+            style={{
+              left: "calc(100% + 8px)",
+              top: "calc(50% - 18px)",
+              color: "var(--handle-color-audio)",
+              zIndex: 10,
+            }}
+          >
+            Audio
+          </div>
+        )}
 
       </BaseNode>
 

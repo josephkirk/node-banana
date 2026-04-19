@@ -19,6 +19,7 @@ import { InlineParameterPanel } from "./InlineParameterPanel";
 import { SettingsTabBar } from "./SettingsTabBar";
 import { browseRegistry } from "@/utils/browseRegistry";
 import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 // Video generation capabilities
 const VIDEO_CAPABILITIES: ModelCapability[] = ["text-to-video", "image-to-video", "audio-to-video"];
@@ -69,6 +70,7 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
 
   // Inline parameters infrastructure
   const { inlineParametersEnabled } = useInlineParameters();
+  const showLabels = useShowHandleLabels(selected);
 
   // Register browse callback for floating header button
   useEffect(() => {
@@ -569,18 +571,20 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
                   title={handle.description || handle.label}
                 />
                 {/* Handle label - positioned outside node, above the connector */}
-                <div
-                  className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-                  style={{
-                    right: `calc(100% + 8px)`,
-                    top: `calc(${topPercent}% - 18px)`,
-                    color: getHandleColor(handle.type),
-                    opacity: handle.isPlaceholder ? 0.3 : 1,
-                    zIndex: 10,
-                  }}
-                >
-                  {handle.label}
-                </div>
+                {showLabels && (
+                  <div
+                    className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+                    style={{
+                      right: `calc(100% + 8px)`,
+                      top: `calc(${topPercent}% - 18px)`,
+                      color: getHandleColor(handle.type),
+                      opacity: handle.isPlaceholder ? 0.3 : 1,
+                      zIndex: 10,
+                    }}
+                  >
+                    {handle.label}
+                  </div>
+                )}
               </React.Fragment>
             );
           });
@@ -631,17 +635,19 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
             isConnectable={true}
           />
           {/* Default image label */}
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: `calc(100% + 8px)`,
-              top: "calc(35% - 18px)",
-              color: "var(--handle-color-image)",
-              zIndex: 10,
-            }}
-          >
-            Image
-          </div>
+          {showLabels && (
+            <div
+              className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+              style={{
+                right: `calc(100% + 8px)`,
+                top: "calc(35% - 18px)",
+                color: "var(--handle-color-image)",
+                zIndex: 10,
+              }}
+            >
+              Image
+            </div>
+          )}
           <Handle
             type="target"
             position={Position.Left}
@@ -650,17 +656,19 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
             data-handletype="text"
           />
           {/* Default text label */}
-          <div
-            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-            style={{
-              right: `calc(100% + 8px)`,
-              top: "calc(65% - 18px)",
-              color: "var(--handle-color-text)",
-              zIndex: 10,
-            }}
-          >
-            Prompt
-          </div>
+          {showLabels && (
+            <div
+              className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+              style={{
+                right: `calc(100% + 8px)`,
+                top: "calc(65% - 18px)",
+                color: "var(--handle-color-text)",
+                zIndex: 10,
+              }}
+            >
+              Prompt
+            </div>
+          )}
         </>
       )}
       {/* Video output */}
@@ -672,17 +680,19 @@ export function GenerateVideoNode({ id, data, selected }: NodeProps<GenerateVide
         style={{ zIndex: 10 }}
       />
       {/* Output label */}
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{
-          left: `calc(100% + 8px)`,
-          top: "calc(50% - 18px)",
-          color: "var(--handle-color-image)",
-          zIndex: 10,
-        }}
-      >
-        Video
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{
+            left: `calc(100% + 8px)`,
+            top: "calc(50% - 18px)",
+            color: "var(--handle-color-image)",
+            zIndex: 10,
+          }}
+        >
+          Video
+        </div>
+      )}
 
       <div className="relative w-full h-full min-h-0 overflow-hidden rounded-lg">
         {/* Preview area */}

@@ -10,6 +10,7 @@ import { useVideoBlobUrl } from "@/hooks/useVideoBlobUrl";
 import { useVideoAutoplay } from "@/hooks/useVideoAutoplay";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { downloadMedia, MediaType } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 
 type OutputNodeType = Node<OutputNodeData, "output">;
 
@@ -22,6 +23,7 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
     (state) => state.edges.filter((edge) => edge.target === id).length
   );
   const isRunning = useWorkflowStore((state) => state.isRunning);
+  const showLabels = useShowHandleLabels(selected);
   const [showLightbox, setShowLightbox] = useState(false);
   const previousEdgeCountRef = useRef<number | null>(null);
   const videoAutoplayRef = useVideoAutoplay(id, selected);
@@ -98,15 +100,61 @@ export function OutputNode({ id, data, selected }: NodeProps<OutputNodeType>) {
           position={Position.Left}
           id="image"
           data-handletype="image"
-          style={{ zIndex: 10 }}
+          style={{ top: "35%", zIndex: 10 }}
         />
+        {showLabels && (
+          <div
+            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+            style={{
+              right: "calc(100% + 8px)",
+              top: "calc(35% - 18px)",
+              color: "var(--handle-color-image)",
+              zIndex: 10,
+            }}
+          >
+            Image
+          </div>
+        )}
+        <Handle
+          type="target"
+          position={Position.Left}
+          id="video"
+          data-handletype="video"
+          style={{ top: "50%", zIndex: 10 }}
+        />
+        {showLabels && (
+          <div
+            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+            style={{
+              right: "calc(100% + 8px)",
+              top: "calc(50% - 18px)",
+              color: "var(--handle-color-video)",
+              zIndex: 10,
+            }}
+          >
+            Video
+          </div>
+        )}
         <Handle
           type="target"
           position={Position.Left}
           id="audio"
           data-handletype="audio"
-          style={{ top: "60%", background: "rgb(167, 139, 250)", zIndex: 10 }}
+          style={{ top: "65%", background: "rgb(167, 139, 250)", zIndex: 10 }}
         />
+        {showLabels && (
+          <div
+            className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+            style={{
+              right: "calc(100% + 8px)",
+              top: "calc(65% - 18px)",
+              color: "var(--handle-color-audio)",
+              zIndex: 10,
+            }}
+          >
+            Audio
+          </div>
+        )}
 
         <div className="relative w-full h-full overflow-hidden rounded-lg">
         {contentSrc ? (

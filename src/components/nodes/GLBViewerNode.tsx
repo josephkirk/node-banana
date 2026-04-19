@@ -10,6 +10,7 @@ import { useToast } from "@/components/Toast";
 import { GLBViewerNodeData } from "@/types";
 import { useAdaptiveImageSrc } from "@/hooks/useAdaptiveImageSrc";
 import { downloadMedia } from "@/utils/downloadMedia";
+import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
@@ -211,6 +212,7 @@ export function GLBViewerNode({ id, data, selected }: NodeProps<GLBViewerNodeTyp
   const [autoRotate, setAutoRotate] = useState(false);
   const [isInteracting, setIsInteracting] = useState(false);
   const envGroupRef = useRef<THREE.Group>(null);
+  const showLabels = useShowHandleLabels(selected);
 
   // Auto-resize node when capture image appears/disappears
   const prevCapturedRef = useRef<string | null>(null);
@@ -520,16 +522,18 @@ export function GLBViewerNode({ id, data, selected }: NodeProps<GLBViewerNodeTyp
         style={{ top: "50%" }}
         data-handletype="3d"
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
-        style={{
-          right: `calc(100% + 8px)`,
-          top: "calc(50% - 18px)",
-          color: "var(--handle-color-3d)",
-        }}
-      >
-        3D
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none text-right"
+          style={{
+            right: `calc(100% + 8px)`,
+            top: "calc(50% - 18px)",
+            color: "var(--handle-color-3d)",
+          }}
+        >
+          3D
+        </div>
+      )}
 
       {/* Output handle - image (captured viewport) */}
       <Handle
@@ -539,16 +543,18 @@ export function GLBViewerNode({ id, data, selected }: NodeProps<GLBViewerNodeTyp
         style={{ top: "50%" }}
         data-handletype="image"
       />
-      <div
-        className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
-        style={{
-          left: `calc(100% + 8px)`,
-          top: "calc(50% - 18px)",
-          color: "var(--handle-color-image)",
-        }}
-      >
-        Image
-      </div>
+      {showLabels && (
+        <div
+          className="absolute text-[10px] font-medium whitespace-nowrap pointer-events-none"
+          style={{
+            left: `calc(100% + 8px)`,
+            top: "calc(50% - 18px)",
+            color: "var(--handle-color-image)",
+          }}
+        >
+          Image
+        </div>
+      )}
     </BaseNode>
   );
 }
