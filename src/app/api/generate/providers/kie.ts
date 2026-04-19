@@ -554,50 +554,43 @@ export async function pollVeoTaskCompletion(
 }
 
 /**
- * Generate image/video using Kie.ai API
+ * Submit a Kie.ai task (upload images, build params, create task).
+ * Returns the taskId and whether it's a Veo model.
  */
-export async function generateWithKie(
+export async function submitKieTask(
   requestId: string,
   apiKey: string,
   input: GenerationInput
-): Promise<GenerationOutput> {
+): Promise<{ taskId: string; isVeo: boolean }> {
   const modelId = input.model.id;
 
   console.log(`[API:${requestId}] Kie.ai generation - Model: ${modelId}, Images: ${input.images?.length || 0}, Prompt: ${input.prompt.length} chars`);
 
   // Build the input object (all parameters go inside "input" for Kie API)
-  // Start with model-specific required defaults
   const modelDefaults = getKieModelDefaults(modelId);
   const inputParams: Record<string, unknown> = { ...modelDefaults };
 
-  // Add prompt
   if (input.prompt) {
     inputParams.prompt = input.prompt;
   }
 
-  // Add model parameters (user params override defaults)
   if (input.parameters) {
     Object.assign(inputParams, input.parameters);
   }
 
-  // GPT Image 1.5 does NOT support 'size' parameter - only 'aspect_ratio'
-  // Remove any stale 'size' values from old workflow data
+  // GPT Image 1.5 does NOT support 'size' parameter
   if (modelId.startsWith("gpt-image/1.5")) {
     delete inputParams.size;
   }
 
   // Handle dynamic inputs FIRST (from schema-mapped connections) - these take priority
-  // Track which image keys dynamicInputs already handled to avoid double-uploads
   const handledImageKeys = new Set<string>();
 
   if (input.dynamicInputs) {
     for (const [key, value] of Object.entries(input.dynamicInputs)) {
       if (value !== null && value !== undefined && value !== '') {
-        // Check if this is a media input (image/video/audio) that needs uploading
         if (typeof value === 'string' && value.startsWith('data:')) {
-          // Single data URL - upload it
           const url = await uploadMediaToKie(requestId, apiKey, value);
-          // Singular keys get a string, plural keys get an array
           if (key === "image_url" || key === "video_url" || key === "tail_image_url" || key === "first_frame_url" || key === "last_frame_url" || key === "first_clip_url") {
             inputParams[key] = url;
           } else {
@@ -605,7 +598,6 @@ export async function generateWithKie(
           }
           handledImageKeys.add(key);
         } else if (Array.isArray(value)) {
-          // Array of values - check if they're data URLs that need uploading
           const processedArray: string[] = [];
           for (const item of value) {
             if (typeof item === 'string' && item.startsWith('data:')) {
@@ -618,7 +610,6 @@ export async function generateWithKie(
             }
           }
           if (processedArray.length > 0) {
-            // Singular keys get first element, plural keys get full array
             if (key === "image_url" || key === "video_url" || key === "tail_image_url" || key === "first_frame_url" || key === "last_frame_url" || key === "first_clip_url") {
               inputParams[key] = processedArray[0];
             } else {
@@ -636,19 +627,16 @@ export async function generateWithKie(
   // Handle image inputs (fallback - only if dynamicInputs didn't already set the image key)
   const imageKey = getKieImageInputKey(modelId);
   if (input.images && input.images.length > 0 && !handledImageKeys.has(imageKey)) {
-    // Upload images to get URLs (Kie requires URLs, not base64)
     const imageUrls: string[] = [];
     for (const image of input.images) {
       if (image.startsWith("http")) {
         imageUrls.push(image);
       } else {
-        // Upload base64 media
         const url = await uploadMediaToKie(requestId, apiKey, image);
         imageUrls.push(url);
       }
     }
 
-    // Some models use singular string, others use arrays
     if (imageKey === "image_url" || imageKey === "video_url" || imageKey === "first_frame_url" || imageKey === "last_frame_url" || imageKey === "first_clip_url") {
       inputParams[imageKey] = imageUrls[0];
     } else {
@@ -664,14 +652,12 @@ export async function generateWithKie(
       aspect_ratio: inputParams.aspect_ratio || "16:9",
     };
 
-    // Add image URLs if present (for image-to-video)
     if (inputParams.imageUrls) {
       veoBody.imageUrls = Array.isArray(inputParams.imageUrls)
         ? inputParams.imageUrls
         : [inputParams.imageUrls];
     }
 
-    // Add optional seed
     if (inputParams.seeds !== undefined) {
       veoBody.seeds = inputParams.seeds;
     }
@@ -699,87 +685,24 @@ export async function generateWithKie(
         // Keep original text
       }
       if (createResponse.status === 429) {
-        return { success: false, error: `${input.model.name}: Rate limit exceeded. Try again in a moment.` };
+        throw new Error(`${input.model.name}: Rate limit exceeded. Try again in a moment.`);
       }
-      return { success: false, error: `${input.model.name}: ${errorDetail}` };
+      throw new Error(`${input.model.name}: ${errorDetail}`);
     }
 
     const createResult = await createResponse.json();
     if (createResult.code && createResult.code !== 200) {
-      return { success: false, error: `${input.model.name}: ${createResult.msg || "API error"}` };
+      throw new Error(`${input.model.name}: ${createResult.msg || "API error"}`);
     }
 
     const taskId = createResult.data?.taskId || createResult.taskId;
     if (!taskId) {
       console.error(`[API:${requestId}] No taskId in Veo response:`, createResult);
-      return { success: false, error: "No task ID in Veo response" };
+      throw new Error("No task ID in Veo response");
     }
 
     console.log(`[API:${requestId}] Veo task created: ${taskId}`);
-
-    // Poll with Veo-specific polling
-    const pollResult = await pollVeoTaskCompletion(requestId, apiKey, taskId);
-    if (!pollResult.success) {
-      return { success: false, error: `${input.model.name}: ${pollResult.error}` };
-    }
-
-    // Extract video URL from Veo response format
-    const data = pollResult.data;
-    let mediaUrl: string | null = null;
-
-    const responseObj = data?.response as Record<string, unknown> | undefined;
-    const resultUrls = (responseObj?.resultUrls || data?.resultUrls) as string[] | undefined;
-    if (resultUrls && resultUrls.length > 0) {
-      mediaUrl = resultUrls[0];
-    }
-
-    if (!mediaUrl) {
-      console.error(`[API:${requestId}] No media URL found in Veo response:`, data);
-      return { success: false, error: "No output URL in Veo response" };
-    }
-
-    // Validate URL before fetching
-    const mediaUrlCheck = validateMediaUrl(mediaUrl);
-    if (!mediaUrlCheck.valid) {
-      return { success: false, error: `Invalid media URL: ${mediaUrlCheck.error}` };
-    }
-
-    // Fetch the video and convert to base64
-    console.log(`[API:${requestId}] Fetching Veo output from: ${mediaUrl.substring(0, 80)}...`);
-    const mediaResponse = await fetch(mediaUrl);
-    if (!mediaResponse.ok) {
-      return { success: false, error: `Failed to fetch output: ${mediaResponse.status}` };
-    }
-
-    const mediaContentLength = parseInt(mediaResponse.headers.get("content-length") || "0", 10);
-    if (mediaContentLength > MAX_MEDIA_SIZE) {
-      return { success: false, error: `Media too large: ${(mediaContentLength / (1024 * 1024)).toFixed(0)}MB > 500MB limit` };
-    }
-
-    const contentType = mediaResponse.headers.get("content-type") || "video/mp4";
-    const mediaArrayBuffer = await mediaResponse.arrayBuffer();
-    if (mediaArrayBuffer.byteLength > MAX_MEDIA_SIZE) {
-      return { success: false, error: `Media too large: ${(mediaArrayBuffer.byteLength / (1024 * 1024)).toFixed(0)}MB > 500MB limit` };
-    }
-    const mediaSizeMB = mediaArrayBuffer.byteLength / (1024 * 1024);
-
-    console.log(`[API:${requestId}] Veo output: ${contentType}, ${mediaSizeMB.toFixed(2)}MB`);
-
-    // For very large videos (>20MB), return URL only (data left empty for consumers)
-    if (mediaSizeMB > 20) {
-      console.log(`[API:${requestId}] SUCCESS - Returning URL for large Veo video`);
-      return {
-        success: true,
-        outputs: [{ type: "video", data: "", url: mediaUrl }],
-      };
-    }
-
-    const mediaBase64 = Buffer.from(mediaArrayBuffer).toString("base64");
-    console.log(`[API:${requestId}] SUCCESS - Returning Veo video`);
-    return {
-      success: true,
-      outputs: [{ type: "video", data: `data:${contentType};base64,${mediaBase64}`, url: mediaUrl }],
-    };
+    return { taskId, isVeo: true };
   }
 
   // ElevenLabs models use "text" instead of "prompt"
@@ -791,8 +714,6 @@ export async function generateWithKie(
   }
 
   // All remaining Kie models use the standard createTask endpoint
-  // Strip capability suffixes from model IDs that use them internally
-  // e.g. "bytedance/seedance-2/text-to-video" → "bytedance/seedance-2"
   const apiModelId = getKieApiModelId(modelId);
   const requestBody: Record<string, unknown> = {
     model: apiModelId,
@@ -802,7 +723,6 @@ export async function generateWithKie(
   const createUrl = "https://api.kie.ai/api/v1/jobs/createTask";
 
   console.log(`[API:${requestId}] Calling Kie.ai API: ${createUrl}`);
-  // Log full request body for debugging (truncate very long prompts)
   const bodyForLogging = { ...requestBody };
   if (bodyForLogging.input && typeof bodyForLogging.input === 'object') {
     const inputForLogging = { ...(bodyForLogging.input as Record<string, unknown>) };
@@ -813,7 +733,6 @@ export async function generateWithKie(
   }
   console.log(`[API:${requestId}] Request body:`, JSON.stringify(bodyForLogging, null, 2));
 
-  // Create task
   const createResponse = await fetch(createUrl, {
     method: "POST",
     headers: {
@@ -834,75 +753,219 @@ export async function generateWithKie(
     }
 
     if (createResponse.status === 429) {
-      return {
-        success: false,
-        error: `${input.model.name}: Rate limit exceeded. Try again in a moment.`,
-      };
+      throw new Error(`${input.model.name}: Rate limit exceeded. Try again in a moment.`);
     }
 
-    return {
-      success: false,
-      error: `${input.model.name}: ${errorDetail}`,
-    };
+    throw new Error(`${input.model.name}: ${errorDetail}`);
   }
 
   const createResult = await createResponse.json();
 
-  // Kie API returns HTTP 200 even on errors, check the response code
   if (createResult.code && createResult.code !== 200) {
     const errorMsg = createResult.msg || createResult.message || "API error";
     console.error(`[API:${requestId}] Kie API error (code ${createResult.code}):`, errorMsg);
-    return {
-      success: false,
-      error: `${input.model.name}: ${errorMsg}`,
-    };
+    throw new Error(`${input.model.name}: ${errorMsg}`);
   }
 
   const taskId = createResult.taskId || createResult.data?.taskId || createResult.id;
 
   if (!taskId) {
     console.error(`[API:${requestId}] No taskId in Kie response:`, createResult);
-    return {
-      success: false,
-      error: "No task ID in response",
-    };
+    throw new Error("No task ID in response");
   }
 
   console.log(`[API:${requestId}] Kie task created: ${taskId}`);
+  return { taskId, isVeo: false };
+}
 
-  // Poll for completion
-  const pollResult = await pollKieTaskCompletion(requestId, apiKey, taskId);
+/**
+ * Check a Kie.ai task status once (no polling loop).
+ * Returns the current status and data if completed.
+ */
+export async function checkKieTaskOnce(
+  requestId: string,
+  apiKey: string,
+  taskId: string,
+  isVeo: boolean
+): Promise<{ status: "processing" | "completed" | "failed"; data?: Record<string, unknown>; error?: string; taskState?: string }> {
+  if (isVeo) {
+    const pollUrl = `https://api.kie.ai/api/v1/veo/record-info?taskId=${encodeURIComponent(taskId)}`;
 
-  if (!pollResult.success) {
+    let response: Response;
+    try {
+      response = await fetch(pollUrl, {
+        headers: { "Authorization": `Bearer ${apiKey}` },
+      });
+    } catch (err) {
+      console.warn(`[API:${requestId}] Veo poll network error:`, err);
+      return { status: "processing", taskState: "NETWORK_ERROR" };
+    }
+
+    if (!response.ok) {
+      if (response.status === 404 || response.status === 422 || response.status === 429 || response.status >= 500) {
+        return { status: "processing", taskState: `HTTP_${response.status}` };
+      }
+      return { status: "failed", error: `Failed to poll status: ${response.status}` };
+    }
+
+    let result: Record<string, unknown>;
+    try {
+      result = await response.json();
+    } catch {
+      return { status: "processing", taskState: "PARSE_ERROR" };
+    }
+
+    const successFlag = (result.data as Record<string, unknown> | undefined)?.successFlag ?? -1;
+    console.log(`[API:${requestId}] Veo task successFlag: ${successFlag}`);
+
+    if (successFlag === 1) {
+      return { status: "completed", data: result.data as Record<string, unknown> };
+    }
+    if (successFlag === 2 || successFlag === 3) {
+      const errorMessage = (result.data as Record<string, unknown>)?.errorMessage || "Generation failed";
+      return { status: "failed", error: errorMessage as string };
+    }
+    return { status: "processing", taskState: `successFlag=${successFlag}` };
+  }
+
+  // Standard Kie polling
+  const pollUrl = `https://api.kie.ai/api/v1/jobs/recordInfo?taskId=${encodeURIComponent(taskId)}`;
+
+  let response: Response;
+  try {
+    response = await fetch(pollUrl, {
+      headers: { "Authorization": `Bearer ${apiKey}` },
+    });
+  } catch (err) {
+    console.warn(`[API:${requestId}] Kie poll network error:`, err);
+    return { status: "processing", taskState: "NETWORK_ERROR" };
+  }
+
+  if (!response.ok) {
+    if (response.status === 404 || response.status === 422 || response.status === 429 || response.status >= 500) {
+      return { status: "processing", taskState: `HTTP_${response.status}` };
+    }
+    return { status: "failed", error: `Failed to poll status: ${response.status}` };
+  }
+
+  let result: Record<string, unknown>;
+  try {
+    result = await response.json();
+  } catch {
+    return { status: "processing", taskState: "PARSE_ERROR" };
+  }
+
+  // Kie API can return HTTP 200 with code != 200
+  if (result.code && result.code !== 200) {
+    console.log(`[API:${requestId}] Kie poll returned code ${result.code}: ${(result as Record<string, unknown>).msg || ""}`);
+    return { status: "processing", taskState: `code=${result.code}` };
+  }
+
+  const data = result.data as Record<string, unknown> | undefined;
+  const state = ((data?.state || result.state || result.status || "") as string).toUpperCase();
+
+  console.log(`[API:${requestId}] Kie task state: ${state}`);
+
+  if (state === "SUCCESS" || state === "COMPLETED") {
+    return { status: "completed", data: data || result };
+  }
+
+  if (state === "FAIL" || state === "FAILED" || state === "ERROR") {
+    console.error(`[API:${requestId}] Kie task failed. Full response:`, JSON.stringify(result).substring(0, 1000));
+    const errorMessage = data?.failMsg || data?.errorMessage || result.error || result.message || "Generation failed";
+    return { status: "failed", error: errorMessage as string };
+  }
+
+  return { status: "processing", taskState: state };
+}
+
+/** Info needed to fetch the final media result from completed poll data */
+export interface KieMediaResultInput {
+  pollData: Record<string, unknown>;
+  isVeo: boolean;
+  modelName: string;
+  capabilities: string[];
+}
+
+/**
+ * Fetch the final media result from completed Kie poll data.
+ * Extracts media URL, downloads, converts to base64.
+ */
+export async function fetchKieMediaResult(
+  requestId: string,
+  info: KieMediaResultInput
+): Promise<GenerationOutput> {
+  const { pollData: data, isVeo, modelName, capabilities } = info;
+
+  if (isVeo) {
+    let mediaUrl: string | null = null;
+    const responseObj = data?.response as Record<string, unknown> | undefined;
+    const resultUrls = (responseObj?.resultUrls || data?.resultUrls) as string[] | undefined;
+    if (resultUrls && resultUrls.length > 0) {
+      mediaUrl = resultUrls[0];
+    }
+
+    if (!mediaUrl) {
+      console.error(`[API:${requestId}] No media URL found in Veo response:`, data);
+      return { success: false, error: "No output URL in Veo response" };
+    }
+
+    const mediaUrlCheck = validateMediaUrl(mediaUrl);
+    if (!mediaUrlCheck.valid) {
+      return { success: false, error: `Invalid media URL: ${mediaUrlCheck.error}` };
+    }
+
+    console.log(`[API:${requestId}] Fetching Veo output from: ${mediaUrl.substring(0, 80)}...`);
+    const mediaResponse = await fetch(mediaUrl);
+    if (!mediaResponse.ok) {
+      return { success: false, error: `Failed to fetch output: ${mediaResponse.status}` };
+    }
+
+    const mediaContentLength = parseInt(mediaResponse.headers.get("content-length") || "0", 10);
+    if (mediaContentLength > MAX_MEDIA_SIZE) {
+      return { success: false, error: `Media too large: ${(mediaContentLength / (1024 * 1024)).toFixed(0)}MB > 500MB limit` };
+    }
+
+    const contentType = mediaResponse.headers.get("content-type") || "video/mp4";
+    const mediaArrayBuffer = await mediaResponse.arrayBuffer();
+    if (mediaArrayBuffer.byteLength > MAX_MEDIA_SIZE) {
+      return { success: false, error: `Media too large: ${(mediaArrayBuffer.byteLength / (1024 * 1024)).toFixed(0)}MB > 500MB limit` };
+    }
+    const mediaSizeMB = mediaArrayBuffer.byteLength / (1024 * 1024);
+
+    console.log(`[API:${requestId}] Veo output: ${contentType}, ${mediaSizeMB.toFixed(2)}MB`);
+
+    if (mediaSizeMB > 20) {
+      console.log(`[API:${requestId}] SUCCESS - Returning URL for large Veo video`);
+      return {
+        success: true,
+        outputs: [{ type: "video", data: "", url: mediaUrl }],
+      };
+    }
+
+    const mediaBase64 = Buffer.from(mediaArrayBuffer).toString("base64");
+    console.log(`[API:${requestId}] SUCCESS - Returning Veo video`);
     return {
-      success: false,
-      error: `${input.model.name}: ${pollResult.error}`,
+      success: true,
+      outputs: [{ type: "video", data: `data:${contentType};base64,${mediaBase64}`, url: mediaUrl }],
     };
   }
 
-  // Extract output URL from result
-  // Kie API returns: { data: { status: "success", resultJson: { resultUrls: ["url1", "url2"] } } }
-  const data = pollResult.data;
+  // Standard Kie result extraction
   let mediaUrl: string | null = null;
   let isVideo = false;
   let isAudio = false;
-
-  // Used as fallback when content-type is ambiguous
-  const isAudioModel = input.model.capabilities.some(c => c.includes("audio"));
+  const isAudioModel = capabilities.some(c => c.includes("audio"));
 
   console.log(`[API:${requestId}] Kie poll result data:`, JSON.stringify(data).substring(0, 500));
 
-  // Try various response formats - Kie uses resultJson.resultUrls
-  // Note: resultJson is often a JSON string that needs parsing
   if (data) {
     let resultJson = data.resultJson as Record<string, unknown> | string | undefined;
 
-    // Parse resultJson if it's a string (Kie API returns it as escaped JSON string)
     if (typeof resultJson === 'string') {
       try {
         resultJson = JSON.parse(resultJson) as Record<string, unknown>;
       } catch {
-        // Not valid JSON, keep as-is
         resultJson = undefined;
       }
     }
@@ -911,11 +974,8 @@ export async function generateWithKie(
 
     if (resultUrls && resultUrls.length > 0) {
       mediaUrl = resultUrls[0];
-      // Check if it's a video based on URL
       isVideo = mediaUrl.includes('.mp4') || mediaUrl.includes('.webm') || mediaUrl.includes('video');
-    }
-    // Fallback to other formats
-    else if (data.videoUrl) {
+    } else if (data.videoUrl) {
       mediaUrl = data.videoUrl as string;
       isVideo = true;
     } else if (data.video_url) {
@@ -924,9 +984,7 @@ export async function generateWithKie(
     } else if (data.output && typeof data.output === 'string' && (data.output as string).includes('.mp4')) {
       mediaUrl = data.output as string;
       isVideo = true;
-    }
-    // Image outputs
-    else if (data.imageUrl) {
+    } else if (data.imageUrl) {
       mediaUrl = data.imageUrl as string;
     } else if (data.image_url) {
       mediaUrl = data.image_url as string;
@@ -941,40 +999,28 @@ export async function generateWithKie(
 
   if (!mediaUrl) {
     console.error(`[API:${requestId}] No media URL found in Kie response:`, data);
-    return {
-      success: false,
-      error: "No output URL in response",
-    };
+    return { success: false, error: "No output URL in response" };
   }
 
-  // Detect video from URL if not already detected
   if (!isVideo && !isAudio && (mediaUrl.includes('.mp4') || mediaUrl.includes('.webm') || mediaUrl.includes('video'))) {
     isVideo = true;
   }
-
-  // Detect audio from URL if not already detected
   if (!isVideo && !isAudio && (mediaUrl.includes('.mp3') || mediaUrl.includes('.wav') || mediaUrl.includes('.ogg') || mediaUrl.includes('.flac'))) {
     isAudio = true;
   }
 
-  // Validate URL before fetching
   const mediaUrlCheck = validateMediaUrl(mediaUrl);
   if (!mediaUrlCheck.valid) {
     return { success: false, error: `Invalid media URL: ${mediaUrlCheck.error}` };
   }
 
-  // Fetch the media and convert to base64
   console.log(`[API:${requestId}] Fetching output from: ${mediaUrl.substring(0, 80)}...`);
   const mediaResponse = await fetch(mediaUrl);
 
   if (!mediaResponse.ok) {
-    return {
-      success: false,
-      error: `Failed to fetch output: ${mediaResponse.status}`,
-    };
+    return { success: false, error: `Failed to fetch output: ${mediaResponse.status}` };
   }
 
-  // Check file size before downloading body
   const mediaContentLength = parseInt(mediaResponse.headers.get("content-length") || "0", 10);
   if (mediaContentLength > MAX_MEDIA_SIZE) {
     return { success: false, error: `Media too large: ${(mediaContentLength / (1024 * 1024)).toFixed(0)}MB > 500MB limit` };
@@ -982,7 +1028,6 @@ export async function generateWithKie(
 
   const rawContentType = mediaResponse.headers.get("content-type") || "";
   const isConcreteMedia = rawContentType.startsWith("audio/") || rawContentType.startsWith("video/") || rawContentType.startsWith("image/");
-  // Content-type wins over URL-based detection; reset opposite flag to avoid conflicts
   if (rawContentType.startsWith("video/")) {
     isVideo = true;
     isAudio = false;
@@ -998,12 +1043,10 @@ export async function generateWithKie(
   if (mediaArrayBuffer.byteLength > MAX_MEDIA_SIZE) {
     return { success: false, error: `Media too large: ${(mediaArrayBuffer.byteLength / (1024 * 1024)).toFixed(0)}MB > 500MB limit` };
   }
-  const mediaSizeBytes = mediaArrayBuffer.byteLength;
-  const mediaSizeMB = mediaSizeBytes / (1024 * 1024);
+  const mediaSizeMB = mediaArrayBuffer.byteLength / (1024 * 1024);
 
   console.log(`[API:${requestId}] Output: ${contentType}, ${mediaSizeMB.toFixed(2)}MB`);
 
-  // For audio models, return base64 encoded audio
   if (isAudio) {
     const audioBase64 = Buffer.from(mediaArrayBuffer).toString("base64");
     console.log(`[API:${requestId}] SUCCESS - Returning audio`);
@@ -1017,18 +1060,11 @@ export async function generateWithKie(
     };
   }
 
-  // For very large videos (>20MB), return URL only (data left empty for consumers)
   if (isVideo && mediaSizeMB > 20) {
     console.log(`[API:${requestId}] SUCCESS - Returning URL for large video`);
     return {
       success: true,
-      outputs: [
-        {
-          type: "video",
-          data: "",
-          url: mediaUrl,
-        },
-      ],
+      outputs: [{ type: "video", data: "", url: mediaUrl }],
     };
   }
 
@@ -1045,4 +1081,42 @@ export async function generateWithKie(
       },
     ],
   };
+}
+
+/**
+ * Generate image/video using Kie.ai API
+ * Composes submitKieTask + polling + fetchKieMediaResult for backward compatibility.
+ */
+export async function generateWithKie(
+  requestId: string,
+  apiKey: string,
+  input: GenerationInput
+): Promise<GenerationOutput> {
+  try {
+    const { taskId, isVeo } = await submitKieTask(requestId, apiKey, input);
+
+    // Poll for completion using existing polling functions
+    const pollResult = isVeo
+      ? await pollVeoTaskCompletion(requestId, apiKey, taskId)
+      : await pollKieTaskCompletion(requestId, apiKey, taskId);
+
+    if (!pollResult.success) {
+      return {
+        success: false,
+        error: `${input.model.name}: ${pollResult.error}`,
+      };
+    }
+
+    return await fetchKieMediaResult(requestId, {
+      pollData: pollResult.data!,
+      isVeo,
+      modelName: input.model.name,
+      capabilities: input.model.capabilities,
+    });
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Generation failed",
+    };
+  }
 }
