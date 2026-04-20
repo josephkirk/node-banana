@@ -881,7 +881,11 @@ function getKieSchema(modelId: string): ExtractedSchema {
       ],
       inputs: [
         { name: "prompt", type: "text", required: false, label: "Prompt" },
-        { name: "first_frame_url", type: "image", required: true, label: "Image" },
+        { name: "first_frame_url", type: "image", required: true, label: "First Frame", description: "Starting frame of the generated video." },
+        { name: "last_frame_url", type: "image", required: false, label: "Last Frame", description: "Optional end frame — the video interpolates between first and last." },
+        { name: "reference_image_urls", type: "image", required: false, isArray: true, label: "Reference Images", description: "Up to 9 supplementary reference images for style/subject guidance." },
+        { name: "reference_video_urls", type: "image", required: false, isArray: true, label: "Reference Videos", description: "Up to 3 reference videos (uses image handle; accepts video data URLs)." },
+        { name: "reference_audio_urls", type: "audio", required: false, isArray: true, label: "Reference Audio", description: "Up to 3 reference audio clips." },
       ],
     },
     "bytedance/seedance-2-fast/text-to-video": {
@@ -906,7 +910,11 @@ function getKieSchema(modelId: string): ExtractedSchema {
       ],
       inputs: [
         { name: "prompt", type: "text", required: false, label: "Prompt" },
-        { name: "first_frame_url", type: "image", required: true, label: "Image" },
+        { name: "first_frame_url", type: "image", required: true, label: "First Frame", description: "Starting frame of the generated video." },
+        { name: "last_frame_url", type: "image", required: false, label: "Last Frame", description: "Optional end frame — the video interpolates between first and last." },
+        { name: "reference_image_urls", type: "image", required: false, isArray: true, label: "Reference Images", description: "Up to 9 supplementary reference images for style/subject guidance." },
+        { name: "reference_video_urls", type: "image", required: false, isArray: true, label: "Reference Videos", description: "Up to 3 reference videos (uses image handle; accepts video data URLs)." },
+        { name: "reference_audio_urls", type: "audio", required: false, isArray: true, label: "Reference Audio", description: "Up to 3 reference audio clips." },
       ],
     },
     "grok-imagine/text-to-video": {
