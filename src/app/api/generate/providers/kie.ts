@@ -624,9 +624,12 @@ export async function submitKieTask(
     }
   }
 
-  // Handle image inputs (fallback - only if dynamicInputs didn't already set the image key)
+  // Handle image inputs (fallback - only if dynamicInputs didn't already handle any image key).
+  // If the schema-driven dynamic inputs already placed images into specific fields
+  // (e.g. reference_image_urls), don't also populate the default key — some models
+  // treat these fields as mutually exclusive and reject the request.
   const imageKey = getKieImageInputKey(modelId);
-  if (input.images && input.images.length > 0 && !handledImageKeys.has(imageKey)) {
+  if (input.images && input.images.length > 0 && handledImageKeys.size === 0) {
     const imageUrls: string[] = [];
     for (const image of input.images) {
       if (image.startsWith("http")) {
