@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-04-21
+
+### Added
+
+- **Seedance 2 I2V: richer media inputs** — The ByteDance Seedance 2.0 and 2.0 Fast image-to-video nodes now expose Last Frame, Reference Images (up to 9), Reference Videos (up to 3), and Reference Audio (up to 3) handles alongside First Frame. Handle descriptions document the First/Last Frame vs Reference Images mutual-exclusivity rule.
+
+### Fixed
+
+- **Seedance 2 I2V: reference-only runs no longer rejected** — When connecting images only to Reference Images, the request no longer duplicates them into `first_frame_url`, which Kie was rejecting as a mutually-exclusive combination.
+
 ## [1.5.0] - 2026-04-20
 
 ### Added
