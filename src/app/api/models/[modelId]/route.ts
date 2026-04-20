@@ -881,7 +881,11 @@ function getKieSchema(modelId: string): ExtractedSchema {
       ],
       inputs: [
         { name: "prompt", type: "text", required: false, label: "Prompt" },
-        { name: "first_frame_url", type: "image", required: true, label: "Image" },
+        { name: "first_frame_url", type: "image", required: false, label: "First Frame", description: "Starting frame. Mutually exclusive with Reference Images." },
+        { name: "last_frame_url", type: "image", required: false, label: "Last Frame", description: "Optional end frame — interpolates from First to Last. Mutually exclusive with Reference Images." },
+        { name: "reference_image_urls", type: "image", required: false, isArray: true, label: "Reference Images", description: "Up to 9 reference images for style/subject guidance. Mutually exclusive with First/Last Frame." },
+        { name: "reference_video_urls", type: "image", required: false, isArray: true, label: "Reference Videos", description: "Up to 3 reference videos (accepts video data URLs over the image handle)." },
+        { name: "reference_audio_urls", type: "audio", required: false, isArray: true, label: "Reference Audio", description: "Up to 3 reference audio clips." },
       ],
     },
     "bytedance/seedance-2-fast/text-to-video": {
@@ -906,7 +910,11 @@ function getKieSchema(modelId: string): ExtractedSchema {
       ],
       inputs: [
         { name: "prompt", type: "text", required: false, label: "Prompt" },
-        { name: "first_frame_url", type: "image", required: true, label: "Image" },
+        { name: "first_frame_url", type: "image", required: false, label: "First Frame", description: "Starting frame. Mutually exclusive with Reference Images." },
+        { name: "last_frame_url", type: "image", required: false, label: "Last Frame", description: "Optional end frame — interpolates from First to Last. Mutually exclusive with Reference Images." },
+        { name: "reference_image_urls", type: "image", required: false, isArray: true, label: "Reference Images", description: "Up to 9 reference images for style/subject guidance. Mutually exclusive with First/Last Frame." },
+        { name: "reference_video_urls", type: "image", required: false, isArray: true, label: "Reference Videos", description: "Up to 3 reference videos (accepts video data URLs over the image handle)." },
+        { name: "reference_audio_urls", type: "audio", required: false, isArray: true, label: "Reference Audio", description: "Up to 3 reference audio clips." },
       ],
     },
     "grok-imagine/text-to-video": {
