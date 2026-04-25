@@ -49,7 +49,7 @@ export function MultiSelectToolbar() {
     URL.revokeObjectURL(url);
   }, [selectedNodes, nodes]);
 
-  if (!toolbarPosition || selectedNodes.length < 2) return null;
+  // Check if any selected nodes are in a group
   const selectedNodeGroups = useMemo(() => {
     const groupIds = new Set(selectedNodes.map((n) => n.groupId).filter(Boolean));
     return [...groupIds];
@@ -82,6 +82,8 @@ export function MultiSelectToolbar() {
 
     return { x: screenX, y: screenY };
   }, [selectedNodes, getViewport]);
+
+  if (!toolbarPosition || selectedNodes.length < 2) return null;
 
   const handleStackHorizontally = () => {
     if (selectedNodes.length < 2) return;
