@@ -65,7 +65,14 @@ const ALL_NODES_CATEGORIES: { label: string; nodes: { type: NodeType; label: str
     ],
   },
   {
-    label: "Output",
+    label: "Parameters",
+    nodes: [
+      { type: "floatInput", label: "Float Input" },
+    ],
+  },
+  {
+    label: "Outputs",
+
     nodes: [
       { type: "output", label: "Output" },
       { type: "outputGallery", label: "Output Gallery" },

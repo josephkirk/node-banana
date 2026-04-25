@@ -48,6 +48,7 @@ export type NodeType =
   | "generate3d"
   | "crop"
   | "subflow"
+  | "floatInput"
   | "glbViewer";
 
 /**
@@ -111,6 +112,19 @@ export interface SubFlowNodeData extends BaseNodeData {
   };
   status: NodeStatus;
   error: string | null;
+}
+
+/**
+ * Float input node - numeric variable input
+ */
+export interface FloatInputNodeData extends BaseNodeData {
+  value: number;
+  variableName?: string;
+  displayType: "slider" | "spinner" | "rotator";
+  min: number;
+  max: number;
+  step: number;
+  label?: string;
 }
 
 /**
@@ -571,6 +585,7 @@ export type WorkflowNodeData =
   | ConditionalSwitchNodeData
   | CropNodeData
   | SubFlowNodeData
+  | FloatInputNodeData
   | GLBViewerNodeData;
 
 /**

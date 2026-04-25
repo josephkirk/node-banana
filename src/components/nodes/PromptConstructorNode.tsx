@@ -5,7 +5,7 @@ import { Handle, Position, NodeProps, Node } from "@xyflow/react";
 import { BaseNode } from "./BaseNode";
 import { usePromptAutocomplete } from "@/hooks/usePromptAutocomplete";
 import { useWorkflowStore } from "@/store/workflowStore";
-import { PromptConstructorNodeData, PromptNodeData, LLMGenerateNodeData, AvailableVariable } from "@/types";
+import { PromptConstructorNodeData, PromptNodeData, LLMGenerateNodeData, FloatInputNodeData, AvailableVariable } from "@/types";
 import { resolveTextSourcesThroughRouters } from "@/store/utils/connectedInputs";
 import { parseVarTags } from "@/utils/parseVarTags";
 
@@ -41,7 +41,7 @@ export function PromptConstructorNode({ id, data, selected }: NodeProps<PromptCo
     const vars: AvailableVariable[] = [];
     const usedNames = new Set<string>();
 
-    // First pass: named variables from Prompt nodes (these take precedence)
+    // First pass: named variables from Prompt nodes and Float Input nodes
     connectedTextNodes.forEach((node) => {
       if (node.type === "prompt") {
         const promptData = node.data as PromptNodeData;
@@ -52,6 +52,16 @@ export function PromptConstructorNode({ id, data, selected }: NodeProps<PromptCo
             nodeId: node.id,
           });
           usedNames.add(promptData.variableName);
+        }
+      } else if (node.type === "floatInput") {
+        const floatData = node.data as FloatInputNodeData;
+        if (floatData.variableName) {
+          vars.push({
+            name: floatData.variableName,
+            value: floatData.value.toString(),
+            nodeId: node.id,
+          });
+          usedNames.add(floatData.variableName);
         }
       }
     });

@@ -61,6 +61,7 @@ export const defaultNodeDimensions: Record<NodeType, { width: number; height: nu
   conditionalSwitch: { width: 260, height: 180 },
   crop: { width: 300, height: 320 },
   subflow: { width: 260, height: 160 },
+  floatInput: { width: 240, height: 120 },
   glbViewer: { width: 360, height: 380 },
 };
 
@@ -351,6 +352,14 @@ export const createDefaultNodeData = (type: NodeType): WorkflowNodeData => {
         status: "idle",
         error: null,
       } as SubFlowNodeData;
+    case "floatInput":
+      return {
+        value: 0,
+        min: 0,
+        max: 100,
+        step: 1,
+        displayType: "slider",
+      } as FloatInputNodeData;
     case "glbViewer":
       return {
         glbUrl: null,

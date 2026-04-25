@@ -23,4 +23,5 @@ export { SwitchNode } from "./SwitchNode";
 export { ConditionalSwitchNode } from "./ConditionalSwitchNode";
 export { CropNode } from "./CropNode";
 export { SubFlowNode } from "./SubFlowNode";
+export { FloatInputNode } from "./FloatInputNode";
 export { GroupNode } from "./GroupNode";

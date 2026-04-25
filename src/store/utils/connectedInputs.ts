@@ -126,6 +126,8 @@ export function getSourceOutput(
     const value = (data as any)[`output_${sourceHandle}`] || null;
     const mapping = data.interfaceMapping.outputs[sourceHandle || ""];
     return { type: (mapping?.type as any) || "image", value };
+  } else if (sourceNode.type === "floatInput") {
+    return { type: "text", value: (sourceNode.data as FloatInputNodeData).value.toString() };
   } else if (sourceNode.type === "glbViewer") {
     return { type: "image", value: (sourceNode.data as GLBViewerNodeData).capturedImage };
   }

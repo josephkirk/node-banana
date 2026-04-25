@@ -37,7 +37,7 @@ export function CanvasContextMenu({ x, y, node, onClose }: CanvasContextMenuProp
   const isInSubflow = navigationStack.length > 0;
   
   // Only allow exposing handles for certain node types
-  const canExposeAsInput = ["imageInput", "videoInput", "audioInput", "prompt"].includes(node.type || "");
+  const canExposeAsInput = ["imageInput", "videoInput", "audioInput", "prompt", "floatInput"].includes(node.type || "");
   const canExposeAsOutput = ["output"].includes(node.type || "");
 
   if (!isInSubflow || (!canExposeAsInput && !canExposeAsOutput)) return null;
@@ -51,8 +51,9 @@ export function CanvasContextMenu({ x, y, node, onClose }: CanvasContextMenuProp
       {canExposeAsInput && (
         <button
           onClick={() => {
-            const handleId = node.type === "prompt" ? "text" : "image"; // Simplified
-            const type = node.type === "prompt" ? "text" : "image";
+            const isFloat = node.type === "floatInput";
+            const handleId = node.type === "prompt" ? "text" : isFloat ? "value" : "image";
+            const type = node.type === "prompt" ? "text" : isFloat ? "text" : "image";
             exposeHandle(node.id, handleId, "input", type);
             onClose();
           }}

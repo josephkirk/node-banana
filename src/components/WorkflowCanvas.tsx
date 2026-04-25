@@ -50,6 +50,7 @@ import {
   ConditionalSwitchNode,
   CropNode,
   SubFlowNode,
+  FloatInputNode,
 } from "./nodes";
 
 
@@ -286,6 +287,7 @@ const nodeTypes: NodeTypes = {
   conditionalSwitch: ConditionalSwitchNode,
   crop: CropNode,
   subflow: SubFlowNode,
+  floatInput: FloatInputNode,
   glbViewer: GLBViewerNode,
 };
 
