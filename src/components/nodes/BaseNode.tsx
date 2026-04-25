@@ -28,6 +28,8 @@ interface BaseNodeProps {
   settingsPanel?: ReactNode;
   /** Tutorial identifier for highlighting */
   dataTutorial?: string;
+  /** Double click handler for the node */
+  onDoubleClick?: (event: React.MouseEvent) => void;
 }
 
 /**
@@ -72,6 +74,7 @@ export function BaseNode({
   settingsExpanded = false,
   settingsPanel,
   dataTutorial,
+  onDoubleClick,
 }: BaseNodeProps) {
   const currentNodeIds = useWorkflowStore((state) => state.currentNodeIds);
   const setHoveredNodeId = useWorkflowStore((state) => state.setHoveredNodeId);
@@ -285,6 +288,16 @@ export function BaseNode({
     [aspectFitMedia, id, fullBleed, getNodes, setNodes]
   );
 
+  // Combine internal resize dblclick with optional prop dblclick
+  const handleContainerDblClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest(".react-flow__resize-control")) {
+      handleResizeHandleDblClick(e);
+    } else if (onDoubleClick) {
+      onDoubleClick(e);
+    }
+  }, [handleResizeHandleDblClick, onDoubleClick]);
+
   const hasExpandedSettings = settingsExpanded && settingsPanel;
 
   return (
@@ -292,7 +305,7 @@ export function BaseNode({
       className={hasExpandedSettings
         ? `relative flex flex-col w-full h-full overflow-visible bg-neutral-800 rounded-lg ${selected ? "ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/25" : ""}`
         : "contents"}
-      onDoubleClick={handleResizeHandleDblClick}
+      onDoubleClick={handleContainerDblClick}
       data-tutorial={hasExpandedSettings ? dataTutorial : undefined}
     >
       <NodeResizer

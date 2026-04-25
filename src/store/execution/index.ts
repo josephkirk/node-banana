@@ -21,7 +21,11 @@ export {
   executeSwitch,
   executeConditionalSwitch,
   executeCrop,
-} from "./simpleNodeExecutors";
+  } from "./simpleNodeExecutors";
+
+  export { executeSubFlow } from "./subFlowExecutor";
+
+
 
 export { executeNanoBanana } from "./nanoBananaExecutor";
 export type { NanoBananaOptions } from "./nanoBananaExecutor";

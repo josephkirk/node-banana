@@ -60,6 +60,7 @@ export const defaultNodeDimensions: Record<NodeType, { width: number; height: nu
   switch: { width: 220, height: 120 },
   conditionalSwitch: { width: 260, height: 180 },
   crop: { width: 300, height: 320 },
+  subflow: { width: 260, height: 160 },
   glbViewer: { width: 360, height: 380 },
 };
 
@@ -341,6 +342,15 @@ export const createDefaultNodeData = (type: NodeType): WorkflowNodeData => {
         status: "idle",
         error: null,
       } as CropNodeData;
+    case "subflow":
+      return {
+        name: "New Subflow",
+        subgraph: { nodes: [], edges: [], groups: {} },
+        isLinked: false,
+        interfaceMapping: { inputs: {}, outputs: {} },
+        status: "idle",
+        error: null,
+      } as SubFlowNodeData;
     case "glbViewer":
       return {
         glbUrl: null,

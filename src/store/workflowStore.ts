@@ -88,8 +88,11 @@ import {
   executeRouter,
   executeSwitch,
   executeConditionalSwitch,
+  executeCrop,
+  executeSubFlow,
   runBatchIfApplicable,
 } from "./execution";
+
 import type { NodeExecutionContext } from "./execution";
 export type { LevelGroup } from "./utils/executionUtils";
 export { CONCURRENCY_SETTINGS_KEY } from "./utils/executionUtils";
@@ -244,6 +247,10 @@ interface WorkflowStore {
   copySelectedNodes: () => void;
   pasteNodes: (offset?: XYPosition) => void;
   clearClipboard: () => void;
+  collapseSelectedNodes: () => string | null;
+  exposeHandle: (nodeId: string, handleId: string, direction: "input" | "output", type: string) => void;
+  exportSubFlow: (nodeId: string, name: string) => Promise<boolean>;
+  toggleSubFlowLink: (nodeId: string) => void;
 
   // Group operations
   createGroup: (nodeIds: string[]) => string;
@@ -288,6 +295,16 @@ interface WorkflowStore {
   getNodeById: (id: string) => WorkflowNode | undefined;
   getConnectedInputs: (nodeId: string) => ConnectedInputs;
   validateWorkflow: () => { valid: boolean; errors: string[] };
+
+  // Navigation stack for sub-flows
+  navigationStack: Array<{
+    parentId: string;
+    nodes: WorkflowNode[];
+    edges: WorkflowEdge[];
+    groups: Record<string, NodeGroup>;
+  }>;
+  diveIn: (nodeId: string) => void;
+  diveOut: () => void;
 
   // Global Image History
   globalImageHistory: ImageHistoryItem[];
@@ -537,6 +554,61 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
   maxConcurrentCalls: loadConcurrencySetting(),  // Default 3, configurable 1-10
   _abortController: null,  // Internal: for cancellation
   globalImageHistory: [],
+  navigationStack: [],
+
+  diveIn: (nodeId: string) => {
+    const { nodes, edges, groups, navigationStack } = get();
+    const subflowNode = nodes.find(n => n.id === nodeId);
+    if (!subflowNode || subflowNode.type !== 'subflow') return;
+
+    const data = subflowNode.data as SubFlowNodeData;
+    const subgraph = data.subgraph || { nodes: [], edges: [], groups: {} };
+
+    pushUndoCheckpoint(get, set);
+
+    set({
+      navigationStack: [...navigationStack, {
+        parentId: nodeId,
+        nodes: [...nodes],
+        edges: [...edges],
+        groups: { ...groups }
+      }],
+      nodes: subgraph.nodes.map(n => ({ ...n, selected: false })),
+      edges: subgraph.edges,
+      groups: subgraph.groups || {},
+    });
+  },
+
+  diveOut: () => {
+    const { nodes, edges, groups, navigationStack } = get();
+    if (navigationStack.length === 0) return;
+
+    const lastLevel = navigationStack[navigationStack.length - 1];
+    const newStack = navigationStack.slice(0, -1);
+
+    pushUndoCheckpoint(get, set);
+
+    // Update the subflow node in the parent state
+    const updatedParentNodes = lastLevel.nodes.map(node => {
+      if (node.id === lastLevel.parentId) {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            subgraph: { nodes, edges, groups }
+          }
+        };
+      }
+      return node;
+    });
+
+    set({
+      navigationStack: newStack,
+      nodes: updatedParentNodes,
+      edges: lastLevel.edges,
+      groups: lastLevel.groups,
+    });
+  },
 
   // Auto-save initial state
   workflowId: null,
@@ -1011,6 +1083,207 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
     set({ clipboard: null });
   },
 
+  collapseSelectedNodes: () => {
+    const { nodes, edges } = get();
+    const selectedNodes = nodes.filter((n) => n.selected);
+
+    if (selectedNodes.length < 2) {
+      useToast.getState().show("Select at least 2 nodes to collapse", "warning");
+      return null;
+    }
+
+    const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
+
+    // Internal edges: both source and target are in selection
+    const internalEdges = edges.filter(
+      (e) => selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target)
+    );
+
+    // Boundary edges
+    const incomingEdges = edges.filter(
+      (e) => !selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target)
+    );
+    const outgoingEdges = edges.filter(
+      (e) => selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target)
+    );
+
+    // Calculate centroid for the new SubFlow node
+    let sumX = 0, sumY = 0;
+    selectedNodes.forEach((n) => {
+      sumX += n.position.x;
+      sumY += n.position.y;
+    });
+    const position = {
+      x: sumX / selectedNodes.length,
+      y: sumY / selectedNodes.length,
+    };
+
+    // Create SubFlow node
+    const subflowId = `subflow-${++nodeIdCounter}`;
+    const subflowCount = nodes.filter(n => n.type === 'subflow').length;
+    const subflowName = `Subflow ${subflowCount + 1}`;
+
+    const interfaceMapping: SubFlowNodeData['interfaceMapping'] = {
+      inputs: {},
+      outputs: {},
+    };
+
+    // Map incoming edges to inputs
+    incomingEdges.forEach((edge, index) => {
+      const handleId = `input-${index}`;
+      interfaceMapping.inputs[handleId] = {
+        nodeId: edge.target,
+        handleId: edge.targetHandle || "default",
+        type: "image", // Default fallback
+      };
+    });
+
+    // Map outgoing edges to outputs
+    outgoingEdges.forEach((edge, index) => {
+      const handleId = `output-${index}`;
+      interfaceMapping.outputs[handleId] = {
+        nodeId: edge.source,
+        handleId: edge.sourceHandle || "default",
+        type: "image", // Default fallback
+      };
+    });
+
+    const subflowNode: WorkflowNode = {
+      id: subflowId,
+      type: "subflow",
+      position,
+      data: {
+        ...createDefaultNodeData("subflow"),
+        name: subflowName,
+        subgraph: {
+          nodes: selectedNodes.map(n => ({ ...n, selected: false })),
+          edges: internalEdges,
+        },
+        interfaceMapping,
+      } as SubFlowNodeData,
+      style: defaultNodeDimensions["subflow"],
+    };
+
+    pushUndoCheckpoint(get, set);
+
+    // Filter out moved nodes and edges, add the new SubFlow node
+    const remainingNodes = nodes.filter((n) => !selectedNodeIds.has(n.id));
+    const remainingEdges = edges.filter(
+      (e) => !selectedNodeIds.has(e.source) && !selectedNodeIds.has(e.target)
+    );
+
+    // Re-route boundary edges
+    const reRoutedIncoming = incomingEdges.map((edge, index) => ({
+      ...edge,
+      target: subflowId,
+      targetHandle: `input-${index}`,
+    }));
+
+    const reRoutedOutgoing = outgoingEdges.map((edge, index) => ({
+      ...edge,
+      source: subflowId,
+      sourceHandle: `output-${index}`,
+    }));
+
+    set({
+      nodes: [...remainingNodes, subflowNode],
+      edges: [...remainingEdges, ...reRoutedIncoming, ...reRoutedOutgoing],
+      hasUnsavedChanges: true,
+    });
+
+    return subflowId;
+  },
+
+  exposeHandle: (nodeId, handleId, direction, type) => {
+    const { navigationStack } = get();
+    if (navigationStack.length === 0) return;
+
+    const lastLevel = navigationStack[navigationStack.length - 1];
+    const parentId = lastLevel.parentId;
+
+    set((state) => {
+      const newStack = [...state.navigationStack];
+      const levelIdx = newStack.length - 1;
+      const level = newStack[levelIdx];
+
+      const updatedParentNodes = level.nodes.map(node => {
+        if (node.id === parentId) {
+          const data = node.data as SubFlowNodeData;
+          const mapping = {
+            inputs: { ...data.interfaceMapping.inputs },
+            outputs: { ...data.interfaceMapping.outputs },
+          };
+          const targetMap = direction === 'input' ? mapping.inputs : mapping.outputs;
+
+          // Check if already exposed
+          const existingKey = Object.keys(targetMap).find(
+            k => targetMap[k].nodeId === nodeId && targetMap[k].handleId === handleId
+          );
+
+          if (existingKey) {
+            delete targetMap[existingKey];
+          } else {
+            // Use node label or type if possible for a better handle name
+            const internalNode = state.nodes.find(n => n.id === nodeId);
+            const baseName = internalNode?.data.name || internalNode?.type || handleId;
+            const externalHandleId = `${baseName}_${handleId}`;
+            targetMap[externalHandleId] = { nodeId, handleId, type };
+          }
+
+          return {
+            ...node,
+            data: { ...data, interfaceMapping: mapping }
+          };
+        }
+        return node;
+      });
+
+      newStack[levelIdx] = { ...level, nodes: updatedParentNodes };
+      return { navigationStack: newStack, hasUnsavedChanges: true };
+    });
+  },
+
+  exportSubFlow: async (nodeId, name) => {
+    const node = get().nodes.find((n) => n.id === nodeId);
+    if (!node || node.type !== "subflow") return false;
+
+    const data = node.data as SubFlowNodeData;
+    const subgraph = data.subgraph;
+    if (!subgraph) return false;
+
+    const workflow: WorkflowFile = {
+      version: 1,
+      name: name,
+      nodes: subgraph.nodes,
+      edges: subgraph.edges,
+      edgeStyle: get().edgeStyle,
+      groups: subgraph.groups,
+    };
+
+    const json = JSON.stringify(workflow, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${name}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    get().updateNodeData(nodeId, { externalPath: `${name}.json` });
+    return true;
+  },
+
+  toggleSubFlowLink: (nodeId) => {
+    const node = get().nodes.find((n) => n.id === nodeId);
+    if (!node || node.type !== "subflow") return;
+
+    const data = node.data as SubFlowNodeData;
+    get().updateNodeData(nodeId, { isLinked: !data.isLinked });
+  },
+
   // Group operations
   createGroup: (nodeIds: string[]) => {
     const { nodes, groups } = get();
@@ -1389,7 +1662,11 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
           case "splitGrid":
             await executeSplitGrid(executionCtx);
             break;
+          case "subflow":
+            await executeSubFlow(executionCtx);
+            break;
           case "output":
+
             await executeOutput(executionCtx);
             break;
           case "outputGallery":
@@ -1949,6 +2226,9 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         case "crop":
           await executeCrop(executionCtx);
           break;
+        case "subflow":
+          await executeSubFlow(executionCtx);
+          break;
         case "output":
           await executeOutput(executionCtx);
           break;
@@ -2278,6 +2558,7 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       groups: {},
       isRunning: false,
       currentNodeIds: [],
+      navigationStack: [],
       // Reset auto-save state when clearing workflow
       workflowId: null,
       workflowName: null,

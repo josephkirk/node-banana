@@ -21,6 +21,8 @@ import "@xyflow/react/dist/style.css";
 import { useWorkflowStore, WorkflowFile } from "@/store/workflowStore";
 import { useShallow } from "zustand/shallow";
 import { useToast } from "@/components/Toast";
+import { Breadcrumbs } from "./Breadcrumbs";
+import { CanvasContextMenu } from "./CanvasContextMenu";
 import dynamic from "next/dynamic";
 import {
   ImageInputNode,
@@ -47,7 +49,9 @@ import {
   SwitchNode,
   ConditionalSwitchNode,
   CropNode,
+  SubFlowNode,
 } from "./nodes";
+
 
 // Lazy-load GLBViewerNode to avoid bundling three.js for users who don't use 3D nodes
 const GLBViewerNode = dynamic(() => import("./nodes/GLBViewerNode").then(mod => ({ default: mod.GLBViewerNode })), { ssr: false });
@@ -154,6 +158,8 @@ const getNodeHandles = (nodeType: string): { inputs: string[]; outputs: string[]
       return { inputs: ["video"], outputs: ["image"] };
     case "crop":
       return { inputs: ["image"], outputs: ["image"] };
+    case "subflow":
+      return { inputs: [], outputs: [] }; // Handles managed dynamically in SubFlowNode
     case "router":
       return { inputs: ["image", "text", "video", "audio", "3d", "easeCurve", "generic-input"], outputs: ["image", "text", "video", "audio", "3d", "easeCurve", "generic-output"] };
     case "switch":
@@ -280,6 +286,7 @@ export function WorkflowCanvas() {
     switch: SwitchNode,
     conditionalSwitch: ConditionalSwitchNode,
     crop: CropNode,
+    subflow: SubFlowNode,
     glbViewer: GLBViewerNode,
   }), []);
 
@@ -330,6 +337,7 @@ export function WorkflowCanvas() {
   const [isBuildingWorkflow, setIsBuildingWorkflow] = useState(false);
   const [showNewProjectSetup, setShowNewProjectSetup] = useState(false);
   const [expandingNode, setExpandingNode] = useState<{ id: string; type: string } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: WorkflowNode | null } | null>(null);
 
   // Fallback model picker state
   const [fallbackDialogState, setFallbackDialogState] = useState<
@@ -477,6 +485,7 @@ export function WorkflowCanvas() {
     switch: 'Switch',
     conditionalSwitch: 'Conditional Switch',
     crop: 'Crop Image',
+    subflow: 'Subflow',
     glbViewer: '3D Viewer',
   };
 
@@ -1423,6 +1432,18 @@ export function WorkflowCanvas() {
     setConnectionDrop(null);
   }, []);
 
+  const handleNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        node: node as WorkflowNode,
+      });
+    },
+    []
+  );
+
   // Get copy/paste functions and clipboard from store
   const copySelectedNodes = useWorkflowStore((state) => state.copySelectedNodes);
   const pasteNodes = useWorkflowStore((state) => state.pasteNodes);
@@ -2105,6 +2126,8 @@ export function WorkflowCanvas() {
         />
       )}
 
+      <Breadcrumbs />
+
       <ReactFlow
         nodes={allNodes}
         edges={edges}
@@ -2117,6 +2140,8 @@ export function WorkflowCanvas() {
         onNodeDragStart={() => { isDraggingNodeRef.current = true; document.documentElement.classList.add("canvas-interacting"); }}
         onNodeDragStop={(event, node) => { isDraggingNodeRef.current = false; document.documentElement.classList.remove("canvas-interacting"); handleNodeDragStop(event, node); }}
         onSelectionChange={handleSelectionChange}
+        onNodeContextMenu={handleNodeContextMenu}
+        onPaneClick={() => setContextMenu(null)}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         isValidConnection={isValidConnection}
@@ -2521,6 +2546,16 @@ export function WorkflowCanvas() {
 
       {/* AnnotationModal is globally managed by annotationStore */}
       <AnnotationModal />
+
+      {/* Canvas context menu for subflows */}
+      {contextMenu && (
+        <CanvasContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          node={contextMenu.node}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       {/* Tutorial overlay */}
       <TutorialOverlay />

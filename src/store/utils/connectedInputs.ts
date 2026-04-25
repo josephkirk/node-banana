@@ -25,6 +25,8 @@ import {
   PromptConstructorNodeData,
   LLMGenerateNodeData,
   GLBViewerNodeData,
+  CropNodeData,
+  SubFlowNodeData,
   SwitchNodeData,
   ConditionalSwitchNodeData,
   MatchMode,
@@ -119,6 +121,11 @@ export function getSourceOutput(
     return { type: "image", value: (sourceNode.data as VideoFrameGrabNodeData).outputImage };
   } else if (sourceNode.type === "crop") {
     return { type: "image", value: (sourceNode.data as CropNodeData).croppedImage };
+  } else if (sourceNode.type === "subflow") {
+    const data = sourceNode.data as SubFlowNodeData;
+    const value = (data as any)[`output_${sourceHandle}`] || null;
+    const mapping = data.interfaceMapping.outputs[sourceHandle || ""];
+    return { type: (mapping?.type as any) || "image", value };
   } else if (sourceNode.type === "glbViewer") {
     return { type: "image", value: (sourceNode.data as GLBViewerNodeData).capturedImage };
   }

@@ -58,6 +58,7 @@ const ALL_NODES_CATEGORIES: { label: string; nodes: { type: NodeType; label: str
   {
     label: "Route",
     nodes: [
+      { type: "subflow", label: "Subflow" },
       { type: "router", label: "Router" },
       { type: "switch", label: "Switch" },
       { type: "conditionalSwitch", label: "Conditional Switch" },
@@ -333,6 +334,7 @@ export function FloatingActionBar() {
     setModelSearchOpen,
     modelSearchOpen,
     modelSearchProvider,
+    collapseSelectedNodes,
   } = useWorkflowStore(useShallow((state) => ({
     nodes: state.nodes,
     isRunning: state.isRunning,
@@ -348,6 +350,7 @@ export function FloatingActionBar() {
     setModelSearchOpen: state.setModelSearchOpen,
     modelSearchOpen: state.modelSearchOpen,
     modelSearchProvider: state.modelSearchProvider,
+    collapseSelectedNodes: state.collapseSelectedNodes,
   })));
 
   // FTUX tutorial state (client-side only to avoid SSR hydration issues)
@@ -486,6 +489,10 @@ export function FloatingActionBar() {
     }
   };
 
+  const handleCollapse = () => {
+    collapseSelectedNodes();
+  };
+
   return (
     <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-50">
       <div className="flex items-center gap-0.5 bg-neutral-800/95 rounded-lg shadow-lg border border-neutral-700/80 px-1.5 py-1">
@@ -495,6 +502,22 @@ export function FloatingActionBar() {
         <GenerateComboButton />
         <NodeButton type="output" label="Output" dataTutorial="output-button" />
         <AllNodesMenu />
+
+        {selectedNodes.length >= 2 && (
+          <>
+            <div className="w-px h-5 bg-neutral-600 mx-1.5" />
+            <button
+              onClick={handleCollapse}
+              title="Collapse selected nodes into a subflow"
+              className="px-2.5 py-1.5 text-[11px] font-medium text-blue-400 hover:text-blue-300 hover:bg-neutral-700 rounded transition-colors flex items-center gap-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+              </svg>
+              Collapse
+            </button>
+          </>
+        )}
 
         {/* All models button */}
         <div className="w-px h-5 bg-neutral-600 mx-1.5" />

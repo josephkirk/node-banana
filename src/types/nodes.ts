@@ -47,6 +47,7 @@ export type NodeType =
   | "conditionalSwitch"
   | "generate3d"
   | "crop"
+  | "subflow"
   | "glbViewer";
 
 /**
@@ -90,6 +91,26 @@ export interface CropNodeData extends BaseNodeData {
   zoom: number;                          // Saved zoom level
   status: NodeStatus;                    // Standard node status
   error: string | null;                  // Standard error message field
+}
+
+/**
+ * Sub-flow node - references a subgraph of nodes and edges
+ */
+export interface SubFlowNodeData extends BaseNodeData {
+  name: string;
+  subgraph?: {
+    nodes: WorkflowNode[];
+    edges: WorkflowEdge[];
+    groups?: Record<string, NodeGroup>;
+  };
+  externalPath?: string;
+  isLinked: boolean;
+  interfaceMapping: {
+    inputs: { [externalHandleId: string]: { nodeId: string; handleId: string; type: string } };
+    outputs: { [externalHandleId: string]: { nodeId: string; handleId: string; type: string } };
+  };
+  status: NodeStatus;
+  error: string | null;
 }
 
 /**
@@ -549,6 +570,7 @@ export type WorkflowNodeData =
   | SwitchNodeData
   | ConditionalSwitchNodeData
   | CropNodeData
+  | SubFlowNodeData
   | GLBViewerNodeData;
 
 /**

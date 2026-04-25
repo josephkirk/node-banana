@@ -22,4 +22,5 @@ export { RouterNode } from "./RouterNode";
 export { SwitchNode } from "./SwitchNode";
 export { ConditionalSwitchNode } from "./ConditionalSwitchNode";
 export { CropNode } from "./CropNode";
+export { SubFlowNode } from "./SubFlowNode";
 export { GroupNode } from "./GroupNode";
