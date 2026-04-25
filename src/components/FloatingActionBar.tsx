@@ -38,6 +38,12 @@ const ALL_NODES_CATEGORIES: { label: string; nodes: { type: NodeType; label: str
     ],
   },
   {
+    label: "Image Editing",
+    nodes: [
+      { type: "crop", label: "Crop Image" },
+    ],
+  },
+  {
     label: "Process",
     nodes: [
       { type: "annotation", label: "Annotate" },

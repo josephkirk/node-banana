@@ -46,6 +46,7 @@ import {
   RouterNode,
   SwitchNode,
   ConditionalSwitchNode,
+  CropNode,
 } from "./nodes";
 
 // Lazy-load GLBViewerNode to avoid bundling three.js for users who don't use 3D nodes
@@ -82,38 +83,6 @@ import { createPortal } from "react-dom";
 import { useAnnotationStore } from "@/store/annotationStore";
 import { TutorialOverlay } from "./onboarding/TutorialOverlay";
 import { useFTUXStore } from "@/store/ftuxStore";
-
-const nodeTypes: NodeTypes = {
-  imageInput: ImageInputNode,
-  audioInput: AudioInputNode,
-  videoInput: VideoInputNode,
-  annotation: AnnotationNode,
-  prompt: PromptNode,
-  array: ArrayNode,
-  promptConstructor: PromptConstructorNode,
-  nanoBanana: GenerateImageNode,
-  generateVideo: GenerateVideoNode,
-  generate3d: Generate3DNode,
-  generateAudio: GenerateAudioNode,
-  llmGenerate: LLMGenerateNode,
-  splitGrid: SplitGridNode,
-  output: OutputNode,
-  outputGallery: OutputGalleryNode,
-  imageCompare: ImageCompareNode,
-  videoStitch: VideoStitchNode,
-  easeCurve: EaseCurveNode,
-  videoTrim: VideoTrimNode,
-  videoFrameGrab: VideoFrameGrabNode,
-  router: RouterNode,
-  switch: SwitchNode,
-  conditionalSwitch: ConditionalSwitchNode,
-  glbViewer: GLBViewerNode,
-};
-
-const edgeTypes: EdgeTypes = {
-  editable: EditableEdge,
-  reference: ReferenceEdge,
-};
 
 // Connection validation rules
 // - Image handles (green) can only connect to image handles
@@ -183,6 +152,8 @@ const getNodeHandles = (nodeType: string): { inputs: string[]; outputs: string[]
       return { inputs: ["video"], outputs: ["video"] };
     case "videoFrameGrab":
       return { inputs: ["video"], outputs: ["image"] };
+    case "crop":
+      return { inputs: ["image"], outputs: ["image"] };
     case "router":
       return { inputs: ["image", "text", "video", "audio", "3d", "easeCurve", "generic-input"], outputs: ["image", "text", "video", "audio", "3d", "easeCurve", "generic-output"] };
     case "switch":
@@ -284,6 +255,39 @@ export const isPanningRef = { current: false };
 export const isDraggingNodeRef = { current: false };
 
 export function WorkflowCanvas() {
+  const nodeTypes = useMemo(() => ({
+    imageInput: ImageInputNode,
+    audioInput: AudioInputNode,
+    videoInput: VideoInputNode,
+    annotation: AnnotationNode,
+    prompt: PromptNode,
+    array: ArrayNode,
+    promptConstructor: PromptConstructorNode,
+    nanoBanana: GenerateImageNode,
+    generateVideo: GenerateVideoNode,
+    generate3d: Generate3DNode,
+    generateAudio: GenerateAudioNode,
+    llmGenerate: LLMGenerateNode,
+    splitGrid: SplitGridNode,
+    output: OutputNode,
+    outputGallery: OutputGalleryNode,
+    imageCompare: ImageCompareNode,
+    videoStitch: VideoStitchNode,
+    easeCurve: EaseCurveNode,
+    videoTrim: VideoTrimNode,
+    videoFrameGrab: VideoFrameGrabNode,
+    router: RouterNode,
+    switch: SwitchNode,
+    conditionalSwitch: ConditionalSwitchNode,
+    crop: CropNode,
+    glbViewer: GLBViewerNode,
+  }), []);
+
+  const edgeTypes = useMemo(() => ({
+    editable: EditableEdge,
+    reference: ReferenceEdge,
+  }), []);
+
   const { nodes, edges, groups, isModalOpen, showQuickstart, navigationTarget, canvasNavigationSettings, dimmedNodeIds, skippedNodeIds } =
     useWorkflowStore(useShallow((state) => ({
       nodes: state.nodes,
@@ -472,6 +476,7 @@ export function WorkflowCanvas() {
     router: 'Router',
     switch: 'Switch',
     conditionalSwitch: 'Conditional Switch',
+    crop: 'Crop Image',
     glbViewer: '3D Viewer',
   };
 

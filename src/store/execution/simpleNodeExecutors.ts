@@ -15,12 +15,56 @@ import type {
   LLMGenerateNodeData,
   OutputNodeData,
   OutputGalleryNodeData,
+  CropNodeData,
   WorkflowNode,
 } from "@/types";
 import type { NodeExecutionContext } from "./types";
 import { resolveTextSourcesThroughRouters } from "@/store/utils/connectedInputs";
 import { parseTextToArray } from "@/utils/arrayParser";
 import { parseVarTags } from "@/utils/parseVarTags";
+import { cropImage, createImage } from "@/utils/imageCrop";
+
+/**
+ * Manual Crop node: receives upstream image as source. 
+ * Pass through results if already cropped, otherwise mark as idle.
+ */
+export async function executeCrop(ctx: NodeExecutionContext): Promise<void> {
+  const { node, getConnectedInputs, updateNodeData } = ctx;
+  try {
+    const { images } = getConnectedInputs(node.id);
+    const upstreamImage = images[0] || null;
+    const nodeData = node.data as CropNodeData;
+
+    if (!upstreamImage) {
+      updateNodeData(node.id, { 
+        status: "idle", 
+        error: "Source image missing",
+        sourceImage: null,
+        sourceImageDimensions: null,
+      });
+      return;
+    }
+
+    // Sync source image metadata
+    if (upstreamImage !== nodeData.sourceImage) {
+      const image = await createImage(upstreamImage);
+      updateNodeData(node.id, { 
+        sourceImage: upstreamImage,
+        sourceImageDimensions: { width: image.width, height: image.height },
+      });
+      
+      // If we already have a cropArea, we *could* attempt to re-apply it if dimensions match
+      // but usually resolution changes require manual re-adjustment.
+      // For now, we just mark it as "Out of Sync" which is handled by the UI.
+    }
+
+    updateNodeData(node.id, { status: "complete" });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`[Workflow] Crop node ${node.id} failed:`, message);
+    updateNodeData(node.id, { status: "error", error: message });
+  }
+}
 
 /**
  * Annotation node: receives upstream image as source, passes through if no annotations.

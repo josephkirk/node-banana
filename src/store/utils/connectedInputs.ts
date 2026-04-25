@@ -117,6 +117,8 @@ export function getSourceOutput(
     return { type: "text", value: (sourceNode.data as LLMGenerateNodeData).outputText };
   } else if (sourceNode.type === "videoFrameGrab") {
     return { type: "image", value: (sourceNode.data as VideoFrameGrabNodeData).outputImage };
+  } else if (sourceNode.type === "crop") {
+    return { type: "image", value: (sourceNode.data as CropNodeData).croppedImage };
   } else if (sourceNode.type === "glbViewer") {
     return { type: "image", value: (sourceNode.data as GLBViewerNodeData).capturedImage };
   }
@@ -439,6 +441,16 @@ export function validateWorkflowPure(
       const hasManualImage = (node.data as AnnotationNodeData).sourceImage !== null;
       if (!imageConnected && !hasManualImage) {
         errors.push(`Annotation node "${node.id}" missing image input`);
+      }
+    });
+
+  // Check crop nodes have image input
+  nodes
+    .filter((n) => n.type === "crop")
+    .forEach((node) => {
+      const imageConnected = edges.some((e) => e.target === node.id);
+      if (!imageConnected) {
+        errors.push(`Crop node "${node.id}" missing image input`);
       }
     });
 

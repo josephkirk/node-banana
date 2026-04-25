@@ -52,6 +52,7 @@ describe("ConnectionDropMenu", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="source" />);
 
       expect(screen.getByText("Annotate")).toBeInTheDocument();
+      expect(screen.getByText("Crop Image")).toBeInTheDocument();
       expect(screen.getByText("Generate Image")).toBeInTheDocument();
       expect(screen.getByText("Generate Video")).toBeInTheDocument();
       expect(screen.getByText("Split Grid Node")).toBeInTheDocument();
@@ -207,7 +208,7 @@ describe("ConnectionDropMenu", () => {
       fireEvent.keyDown(document, { key: "ArrowDown" });
 
       // Second item should now be highlighted
-      const secondButton = screen.getByText("Generate Image").closest("button");
+      const secondButton = screen.getByText("Crop Image").closest("button");
       expect(secondButton).toHaveClass("bg-neutral-700");
     });
 
@@ -234,12 +235,12 @@ describe("ConnectionDropMenu", () => {
     it("should select navigated item with Enter key", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="source" />);
 
-      // Navigate to second item
+      // Navigate to second item (Crop Image)
       fireEvent.keyDown(document, { key: "ArrowDown" });
       // Press Enter
       fireEvent.keyDown(document, { key: "Enter" });
 
-      expect(mockOnSelect).toHaveBeenCalledWith({ type: "nanoBanana", isAction: false });
+      expect(mockOnSelect).toHaveBeenCalledWith({ type: "crop", isAction: false });
     });
 
     it("should wrap around when navigating past last item", () => {

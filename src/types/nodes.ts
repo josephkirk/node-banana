@@ -46,6 +46,7 @@ export type NodeType =
   | "switch"
   | "conditionalSwitch"
   | "generate3d"
+  | "crop"
   | "glbViewer";
 
 /**
@@ -62,6 +63,33 @@ export interface ImageInputNodeData extends BaseNodeData {
   filename: string | null;
   dimensions: { width: number; height: number } | null;
   isOptional?: boolean;
+}
+
+/**
+ * Manual Crop node - precisely crop images using a modal workspace
+ */
+export interface CropNodeData extends BaseNodeData {
+  sourceImage: string | null;            // Last used source image URL/data
+  sourceImageDimensions: {               // Used for change detection
+    width: number;
+    height: number;
+  } | null;
+  croppedImage: string | null;           // Local preview / Data URL
+  croppedImageRef?: string;              // Primary storage reference
+  cropArea: {                            // react-easy-crop "pixelCrop" format (absolute)
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
+  cropPercent: {                         // react-easy-crop "crop" format (percentages)
+    x: number;
+    y: number;
+  } | null;
+  aspectRatio: number | null;            // null for free-form
+  zoom: number;                          // Saved zoom level
+  status: NodeStatus;                    // Standard node status
+  error: string | null;                  // Standard error message field
 }
 
 /**
@@ -520,6 +548,7 @@ export type WorkflowNodeData =
   | RouterNodeData
   | SwitchNodeData
   | ConditionalSwitchNodeData
+  | CropNodeData
   | GLBViewerNodeData;
 
 /**

@@ -20,6 +20,7 @@ export {
   executeRouter,
   executeSwitch,
   executeConditionalSwitch,
+  executeCrop,
 } from "./simpleNodeExecutors";
 
 export { executeNanoBanana } from "./nanoBananaExecutor";

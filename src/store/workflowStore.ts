@@ -1767,6 +1767,8 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
         await executeGenerateAudio(executionCtx, regenOptions);
       } else if (node.type === "splitGrid") {
         await executeSplitGrid(executionCtx);
+      } else if (node.type === "crop") {
+        await executeCrop(executionCtx);
       } else if (node.type === "videoStitch") {
         await executeVideoStitch(executionCtx);
         set({ isRunning: false, currentNodeIds: [], _abortController: null });
@@ -1943,6 +1945,9 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
           break;
         case "splitGrid":
           await executeSplitGrid(executionCtx);
+          break;
+        case "crop":
+          await executeCrop(executionCtx);
           break;
         case "output":
           await executeOutput(executionCtx);

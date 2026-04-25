@@ -59,6 +59,7 @@ export const defaultNodeDimensions: Record<NodeType, { width: number; height: nu
   router: { width: 200, height: 80 },
   switch: { width: 220, height: 120 },
   conditionalSwitch: { width: 260, height: 180 },
+  crop: { width: 300, height: 320 },
   glbViewer: { width: 360, height: 380 },
 };
 
@@ -328,6 +329,18 @@ export const createDefaultNodeData = (type: NodeType): WorkflowNodeData => {
           }
         ]
       } as ConditionalSwitchNodeData;
+    case "crop":
+      return {
+        sourceImage: null,
+        sourceImageDimensions: null,
+        croppedImage: null,
+        cropArea: null,
+        cropPercent: null,
+        aspectRatio: null,
+        zoom: 1,
+        status: "idle",
+        error: null,
+      } as CropNodeData;
     case "glbViewer":
       return {
         glbUrl: null,
