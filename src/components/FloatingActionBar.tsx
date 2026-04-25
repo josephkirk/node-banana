@@ -16,6 +16,7 @@ const ALL_NODES_CATEGORIES: { label: string; nodes: { type: NodeType; label: str
       { type: "imageInput", label: "Image Input" },
       { type: "audioInput", label: "Audio Input" },
       { type: "videoInput", label: "Video Input" },
+      { type: "floatInput", label: "Float Input" },
       { type: "glbViewer", label: "3D Viewer" },
     ],
   },
@@ -62,12 +63,6 @@ const ALL_NODES_CATEGORIES: { label: string; nodes: { type: NodeType; label: str
       { type: "router", label: "Router" },
       { type: "switch", label: "Switch" },
       { type: "conditionalSwitch", label: "Conditional Switch" },
-    ],
-  },
-  {
-    label: "Parameters",
-    nodes: [
-      { type: "floatInput", label: "Float Input" },
     ],
   },
   {

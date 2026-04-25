@@ -488,6 +488,7 @@ export function WorkflowCanvas() {
     conditionalSwitch: 'Conditional Switch',
     crop: 'Crop Image',
     subflow: 'Subflow',
+    floatInput: 'Float Input',
     glbViewer: '3D Viewer',
   };
 
