@@ -260,9 +260,45 @@ function SubFlowControls({ node }: { node: Node }) {
                 reader.onload = (re) => {
                   try {
                     const content = JSON.parse(re.target?.result as string);
+                    
+                    // Auto-expose inputs and outputs
+                    const interfaceMapping: SubFlowNodeData['interfaceMapping'] = {
+                      inputs: {},
+                      outputs: {},
+                    };
+
+                    const loadedNodes: Node[] = content.nodes || [];
+                    
+                    loadedNodes.forEach((n) => {
+                      const type = n.type as string;
+                      const name = (n.data as any).name || (n.data as any).customTitle || type;
+                      
+                      if (["imageInput", "videoInput", "audioInput", "prompt"].includes(type)) {
+                        const handleId = type === "prompt" ? "text" : 
+                                        type === "audioInput" ? "audio" :
+                                        type === "videoInput" ? "video" : "image";
+                        const mappingType = type === "prompt" ? "text" : 
+                                           type === "audioInput" ? "audio" :
+                                           type === "videoInput" ? "video" : "image";
+                        
+                        interfaceMapping.inputs[`${name}_${n.id}`] = {
+                          nodeId: n.id,
+                          handleId: handleId,
+                          type: mappingType
+                        };
+                      } else if (type === "output") {
+                        interfaceMapping.outputs[`${name}_${n.id}`] = {
+                          nodeId: n.id,
+                          handleId: "image",
+                          type: "image"
+                        };
+                      }
+                    });
+
                     updateNodeData(node.id, { 
                       subgraph: { nodes: content.nodes, edges: content.edges, groups: content.groups },
-                      name: content.name || nodeData.name
+                      name: content.name || nodeData.name,
+                      interfaceMapping
                     });
                   } catch (err) {
                     alert("Failed to parse workflow JSON");
