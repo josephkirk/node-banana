@@ -10,11 +10,12 @@ import type {
   NanoBananaNodeData,
   OutputNodeData,
 } from "@/types";
+import type { WorkflowFile } from "@/store/workflowStore";
 
 const STACK_GAP = 20;
 
 export function MultiSelectToolbar() {
-  const { nodes, onNodesChange, createGroup, removeNodesFromGroup, collapseSelectedNodes, exportSubFlow } = useWorkflowStore();
+  const { nodes, onNodesChange, createGroup, removeNodesFromGroup, collapseSelectedNodes } = useWorkflowStore();
   const { getViewport } = useReactFlow();
 
   const selectedNodes = useMemo(
@@ -83,6 +84,59 @@ export function MultiSelectToolbar() {
     return { x: screenX, y: screenY };
   }, [selectedNodes, getViewport]);
 
+  const handleDownloadImages = useCallback(async () => {
+    // Extract images from selected nodes based on node type
+    const images: { data: string; name: string }[] = [];
+
+    selectedNodes.forEach((node, index) => {
+      let imageData: string | null = null;
+
+      switch (node.type) {
+        case "imageInput":
+          imageData = (node.data as ImageInputNodeData).image;
+          break;
+        case "annotation":
+          imageData = (node.data as AnnotationNodeData).outputImage;
+          break;
+        case "nanoBanana":
+          imageData = (node.data as NanoBananaNodeData).outputImage;
+          break;
+        case "output":
+          imageData = (node.data as OutputNodeData).image;
+          break;
+      }
+
+      if (imageData) {
+        images.push({
+          data: imageData,
+          name: `image-${index + 1}.png`,
+        });
+      }
+    });
+
+    if (images.length === 0) return;
+
+    // Create ZIP file
+    const zip = new JSZip();
+    images.forEach(({ data, name }) => {
+      // Remove data URL prefix to get raw base64
+      const base64Data = data.replace(/^data:image\/\w+;base64,/, "");
+      zip.file(name, base64Data, { base64: true });
+    });
+
+    // Generate and download
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `images-${Date.now()}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [selectedNodes]);
+
+  // FINAL EARLY RETURN: Must be after all hooks (useMemo, useCallback, etc)
   if (!toolbarPosition || selectedNodes.length < 2) return null;
 
   const handleStackHorizontally = () => {
@@ -191,60 +245,6 @@ export function MultiSelectToolbar() {
     const nodeIds = selectedNodes.map((n) => n.id);
     removeNodesFromGroup(nodeIds);
   };
-
-  const handleDownloadImages = useCallback(async () => {
-    // Extract images from selected nodes based on node type
-    const images: { data: string; name: string }[] = [];
-
-    selectedNodes.forEach((node, index) => {
-      let imageData: string | null = null;
-
-      switch (node.type) {
-        case "imageInput":
-          imageData = (node.data as ImageInputNodeData).image;
-          break;
-        case "annotation":
-          imageData = (node.data as AnnotationNodeData).outputImage;
-          break;
-        case "nanoBanana":
-          imageData = (node.data as NanoBananaNodeData).outputImage;
-          break;
-        case "output":
-          imageData = (node.data as OutputNodeData).image;
-          break;
-      }
-
-      if (imageData) {
-        images.push({
-          data: imageData,
-          name: `image-${index + 1}.png`,
-        });
-      }
-    });
-
-    if (images.length === 0) return;
-
-    // Create ZIP file
-    const zip = new JSZip();
-    images.forEach(({ data, name }) => {
-      // Remove data URL prefix to get raw base64
-      const base64Data = data.replace(/^data:image\/\w+;base64,/, "");
-      zip.file(name, base64Data, { base64: true });
-    });
-
-    // Generate and download
-    const blob = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `images-${Date.now()}.zip`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [selectedNodes]);
-
-  if (!toolbarPosition || selectedNodes.length < 2) return null;
 
   return (
     <div

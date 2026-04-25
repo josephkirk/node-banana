@@ -106,17 +106,19 @@ const getHandleType = (handleId: string | null | undefined): "image" | "text" | 
   // Standard handles
   if (handleId === "video") return "video";
   if (handleId === "audio" || handleId.startsWith("audio")) return "audio";
-  if (handleId === "image" || handleId === "text") return handleId;
+  if (handleId === "image" || handleId === "text" || handleId === "value" || handleId === "float") return handleId === "image" ? "image" : "text";
   // Dynamic handles - check naming patterns (including indexed: text-0, image-0)
   if (handleId.includes("video")) return "video";
   if (handleId.startsWith("image-") || handleId.includes("image") || handleId.includes("frame")) return "image";
-  if (handleId.startsWith("text-") || handleId === "prompt" || handleId === "negative_prompt" || handleId.includes("prompt")) return "text";
+  if (handleId.startsWith("text-") || handleId === "prompt" || handleId === "negative_prompt" || handleId.includes("prompt") || handleId.includes("value") || handleId.includes("float")) return "text";
   return null;
 };
 
 // Define which handles each node type has
 const getNodeHandles = (nodeType: string): { inputs: string[]; outputs: string[] } => {
   switch (nodeType) {
+    case "floatInput":
+      return { inputs: [], outputs: ["value"] };
     case "imageInput":
       return { inputs: ["reference"], outputs: ["image"] };
     case "audioInput":
@@ -261,42 +263,42 @@ export const isPanningRef = { current: false };
 /** Shared ref so child components (BaseNode) can skip hover updates during node drags */
 export const isDraggingNodeRef = { current: false };
 
-const nodeTypes: NodeTypes = {
-  imageInput: ImageInputNode,
-  audioInput: AudioInputNode,
-  videoInput: VideoInputNode,
-  annotation: AnnotationNode,
-  prompt: PromptNode,
-  array: ArrayNode,
-  promptConstructor: PromptConstructorNode,
-  nanoBanana: GenerateImageNode,
-  generateVideo: GenerateVideoNode,
-  generate3d: Generate3DNode,
-  generateAudio: GenerateAudioNode,
-  llmGenerate: LLMGenerateNode,
-  splitGrid: SplitGridNode,
-  output: OutputNode,
-  outputGallery: OutputGalleryNode,
-  imageCompare: ImageCompareNode,
-  videoStitch: VideoStitchNode,
-  easeCurve: EaseCurveNode,
-  videoTrim: VideoTrimNode,
-  videoFrameGrab: VideoFrameGrabNode,
-  router: RouterNode,
-  switch: SwitchNode,
-  conditionalSwitch: ConditionalSwitchNode,
-  crop: CropNode,
-  subflow: SubFlowNode,
-  floatInput: FloatInputNode,
-  glbViewer: GLBViewerNode,
-};
-
-const edgeTypes: EdgeTypes = {
-  editable: EditableEdge,
-  reference: ReferenceEdge,
-};
-
 export function WorkflowCanvas() {
+  const nodeTypes = useMemo(() => ({
+    imageInput: ImageInputNode,
+    audioInput: AudioInputNode,
+    videoInput: VideoInputNode,
+    annotation: AnnotationNode,
+    prompt: PromptNode,
+    array: ArrayNode,
+    promptConstructor: PromptConstructorNode,
+    nanoBanana: GenerateImageNode,
+    generateVideo: GenerateVideoNode,
+    generate3d: Generate3DNode,
+    generateAudio: GenerateAudioNode,
+    llmGenerate: LLMGenerateNode,
+    splitGrid: SplitGridNode,
+    output: OutputNode,
+    outputGallery: OutputGalleryNode,
+    imageCompare: ImageCompareNode,
+    videoStitch: VideoStitchNode,
+    easeCurve: EaseCurveNode,
+    videoTrim: VideoTrimNode,
+    videoFrameGrab: VideoFrameGrabNode,
+    router: RouterNode,
+    switch: SwitchNode,
+    conditionalSwitch: ConditionalSwitchNode,
+    crop: CropNode,
+    subflow: SubFlowNode,
+    floatInput: FloatInputNode,
+    glbViewer: GLBViewerNode,
+  }), []);
+
+  const edgeTypes = useMemo(() => ({
+    editable: EditableEdge,
+    reference: ReferenceEdge,
+  }), []);
+
   const { nodes, edges, groups, isModalOpen, showQuickstart, navigationTarget, canvasNavigationSettings, dimmedNodeIds, skippedNodeIds } =
     useWorkflowStore(useShallow((state) => ({
       nodes: state.nodes,
