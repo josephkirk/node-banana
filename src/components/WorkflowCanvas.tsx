@@ -260,41 +260,41 @@ export const isPanningRef = { current: false };
 /** Shared ref so child components (BaseNode) can skip hover updates during node drags */
 export const isDraggingNodeRef = { current: false };
 
+const nodeTypes: NodeTypes = {
+  imageInput: ImageInputNode,
+  audioInput: AudioInputNode,
+  videoInput: VideoInputNode,
+  annotation: AnnotationNode,
+  prompt: PromptNode,
+  array: ArrayNode,
+  promptConstructor: PromptConstructorNode,
+  nanoBanana: GenerateImageNode,
+  generateVideo: GenerateVideoNode,
+  generate3d: Generate3DNode,
+  generateAudio: GenerateAudioNode,
+  llmGenerate: LLMGenerateNode,
+  splitGrid: SplitGridNode,
+  output: OutputNode,
+  outputGallery: OutputGalleryNode,
+  imageCompare: ImageCompareNode,
+  videoStitch: VideoStitchNode,
+  easeCurve: EaseCurveNode,
+  videoTrim: VideoTrimNode,
+  videoFrameGrab: VideoFrameGrabNode,
+  router: RouterNode,
+  switch: SwitchNode,
+  conditionalSwitch: ConditionalSwitchNode,
+  crop: CropNode,
+  subflow: SubFlowNode,
+  glbViewer: GLBViewerNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  editable: EditableEdge,
+  reference: ReferenceEdge,
+};
+
 export function WorkflowCanvas() {
-  const nodeTypes = useMemo(() => ({
-    imageInput: ImageInputNode,
-    audioInput: AudioInputNode,
-    videoInput: VideoInputNode,
-    annotation: AnnotationNode,
-    prompt: PromptNode,
-    array: ArrayNode,
-    promptConstructor: PromptConstructorNode,
-    nanoBanana: GenerateImageNode,
-    generateVideo: GenerateVideoNode,
-    generate3d: Generate3DNode,
-    generateAudio: GenerateAudioNode,
-    llmGenerate: LLMGenerateNode,
-    splitGrid: SplitGridNode,
-    output: OutputNode,
-    outputGallery: OutputGalleryNode,
-    imageCompare: ImageCompareNode,
-    videoStitch: VideoStitchNode,
-    easeCurve: EaseCurveNode,
-    videoTrim: VideoTrimNode,
-    videoFrameGrab: VideoFrameGrabNode,
-    router: RouterNode,
-    switch: SwitchNode,
-    conditionalSwitch: ConditionalSwitchNode,
-    crop: CropNode,
-    subflow: SubFlowNode,
-    glbViewer: GLBViewerNode,
-  }), []);
-
-  const edgeTypes = useMemo(() => ({
-    editable: EditableEdge,
-    reference: ReferenceEdge,
-  }), []);
-
   const { nodes, edges, groups, isModalOpen, showQuickstart, navigationTarget, canvasNavigationSettings, dimmedNodeIds, skippedNodeIds } =
     useWorkflowStore(useShallow((state) => ({
       nodes: state.nodes,
@@ -1617,7 +1617,7 @@ export function WorkflowCanvas() {
           event.preventDefault();
           const { centerX, centerY } = getViewportCenter();
           // Offset by half the default node dimensions to center it
-          const defaultDimensions: Record<NodeType, { width: number; height: number }> = {
+          const defaultDimensions: Record<string, { width: number; height: number }> = {
             imageInput: { width: 300, height: 280 },
             audioInput: { width: 300, height: 200 },
             videoInput: { width: 300, height: 280 },
@@ -1643,8 +1643,15 @@ export function WorkflowCanvas() {
             conditionalSwitch: { width: 260, height: 180 },
             glbViewer: { width: 360, height: 380 },
           };
-          const dims = defaultDimensions[nodeType];
+          const dims = defaultDimensions[nodeType as string] || { width: 300, height: 280 };
           addNode(nodeType, { x: centerX - dims.width / 2, y: centerY - dims.height / 2 });
+          return;
+        }
+
+        // Handle collapse shortcut (Shift + C)
+        if (key === "c") {
+          event.preventDefault();
+          collapseSelectedNodes();
           return;
         }
       }
