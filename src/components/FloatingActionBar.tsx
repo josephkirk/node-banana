@@ -7,70 +7,70 @@ import { NodeType } from "@/types";
 import { useReactFlow } from "@xyflow/react";
 import { ModelSearchDialog } from "./modals/ModelSearchDialog";
 import { useFTUXStore, TutorialStep } from "@/store/ftuxStore";
+import { NODE_LABELS } from "@/utils/nodeLabels";
 
 // All nodes menu categories
 const ALL_NODES_CATEGORIES: { label: string; nodes: { type: NodeType; label: string }[] }[] = [
   {
     label: "Input",
     nodes: [
-      { type: "imageInput", label: "Image Input" },
-      { type: "audioInput", label: "Audio Input" },
-      { type: "videoInput", label: "Video Input" },
-      { type: "floatInput", label: "Float Input" },
-      { type: "glbViewer", label: "3D Viewer" },
+      { type: "imageInput", label: NODE_LABELS.imageInput },
+      { type: "audioInput", label: NODE_LABELS.audioInput },
+      { type: "videoInput", label: NODE_LABELS.videoInput },
+      { type: "floatInput", label: NODE_LABELS.floatInput },
+      { type: "glbViewer", label: NODE_LABELS.glbViewer },
     ],
   },
   {
     label: "Text",
     nodes: [
-      { type: "prompt", label: "Prompt" },
-      { type: "promptConstructor", label: "Prompt Constructor" },
-      { type: "array", label: "Array" },
+      { type: "prompt", label: NODE_LABELS.prompt },
+      { type: "promptConstructor", label: NODE_LABELS.promptConstructor },
+      { type: "array", label: NODE_LABELS.array },
     ],
   },
   {
     label: "Generate",
     nodes: [
-      { type: "nanoBanana", label: "Generate Image" },
-      { type: "generateVideo", label: "Generate Video" },
-      { type: "generate3d", label: "Generate 3D" },
-      { type: "generateAudio", label: "Generate Audio" },
-      { type: "llmGenerate", label: "LLM Generate" },
+      { type: "nanoBanana", label: NODE_LABELS.nanoBanana },
+      { type: "generateVideo", label: NODE_LABELS.generateVideo },
+      { type: "generate3d", label: NODE_LABELS.generate3d },
+      { type: "generateAudio", label: NODE_LABELS.generateAudio },
+      { type: "llmGenerate", label: NODE_LABELS.llmGenerate },
     ],
   },
   {
     label: "Image Editing",
     nodes: [
-      { type: "crop", label: "Crop Image" },
+      { type: "crop", label: NODE_LABELS.crop },
     ],
   },
   {
     label: "Process",
     nodes: [
-      { type: "annotation", label: "Annotate" },
-      { type: "splitGrid", label: "Split Grid" },
-      { type: "videoStitch", label: "Video Stitch" },
-      { type: "videoTrim", label: "Video Trim" },
-      { type: "easeCurve", label: "Ease Curve" },
-      { type: "videoFrameGrab", label: "Frame Grab" },
-      { type: "imageCompare", label: "Image Compare" },
+      { type: "annotation", label: NODE_LABELS.annotation },
+      { type: "splitGrid", label: NODE_LABELS.splitGrid },
+      { type: "videoStitch", label: NODE_LABELS.videoStitch },
+      { type: "videoTrim", label: NODE_LABELS.videoTrim },
+      { type: "easeCurve", label: NODE_LABELS.easeCurve },
+      { type: "videoFrameGrab", label: NODE_LABELS.videoFrameGrab },
+      { type: "imageCompare", label: NODE_LABELS.imageCompare },
     ],
   },
   {
     label: "Route",
     nodes: [
-      { type: "subflow", label: "Subflow" },
-      { type: "router", label: "Router" },
-      { type: "switch", label: "Switch" },
-      { type: "conditionalSwitch", label: "Conditional Switch" },
+      { type: "subflow", label: NODE_LABELS.subflow },
+      { type: "router", label: NODE_LABELS.router },
+      { type: "switch", label: NODE_LABELS.switch },
+      { type: "conditionalSwitch", label: NODE_LABELS.conditionalSwitch },
     ],
   },
   {
     label: "Outputs",
-
     nodes: [
-      { type: "output", label: "Output" },
-      { type: "outputGallery", label: "Output Gallery" },
+      { type: "output", label: NODE_LABELS.output },
+      { type: "outputGallery", label: NODE_LABELS.outputGallery },
     ],
   },
 ];

@@ -4,9 +4,10 @@ import React, { useCallback } from "react";
 import { Handle, Position, NodeProps, Node } from "@xyflow/react";
 import { BaseNode } from "./BaseNode";
 import { useWorkflowStore } from "@/store/workflowStore";
-import { SubFlowNodeData } from "@/types";
+import { SubFlowNodeData, WorkflowNode, NodeType } from "@/types";
 import { useShowHandleLabels } from "@/hooks/useShowHandleLabels";
 import { HandleLabel } from "./HandleLabel";
+import { NODE_LABELS } from "@/utils/nodeLabels";
 
 type SubFlowNodeType = Node<SubFlowNodeData, "subflow">;
 
@@ -22,6 +23,31 @@ export function SubFlowNode({ id, data, selected }: NodeProps<SubFlowNodeType>) 
   const inputKeys = Object.keys(inputs);
   const outputKeys = Object.keys(outputs);
 
+  const resolveLabel = useCallback((handleId: string, mapping: { nodeId: string; handleId: string }) => {
+    const internalNode = data.subgraph?.nodes.find((n: WorkflowNode) => n.id === mapping.nodeId);
+    if (!internalNode) return handleId;
+
+    const nodeData = internalNode.data as any;
+
+    // 1. Use variableName if it exists (custom user label for prompts/floats)
+    if (nodeData.variableName) {
+      return nodeData.variableName;
+    }
+
+    // 2. Use custom name or title if it exists
+    if (nodeData.name || nodeData.customTitle) {
+      return nodeData.name || nodeData.customTitle;
+    }
+
+    // 3. Use specific handle name if it's not generic
+    if (mapping.handleId && !["default", "text", "image", "video", "audio", "value", "target", "source"].includes(mapping.handleId)) {
+      return mapping.handleId;
+    }
+
+    // 4. Fallback to standard node labels
+    return NODE_LABELS[internalNode.type as NodeType] || internalNode.type;
+  }, [data.subgraph]);
+
   return (
     <BaseNode
       id={id}
@@ -32,6 +58,7 @@ export function SubFlowNode({ id, data, selected }: NodeProps<SubFlowNodeType>) 
       {/* Dynamic Input Handles */}
       {inputKeys.map((handleId, index) => {
         const top = `${((index + 1) * 100) / (inputKeys.length + 1)}%`;
+        const label = resolveLabel(handleId, inputs[handleId]);
         return (
           <React.Fragment key={handleId}>
             <Handle
@@ -42,7 +69,7 @@ export function SubFlowNode({ id, data, selected }: NodeProps<SubFlowNodeType>) 
               style={{ top }}
             />
             <HandleLabel 
-              label={handleId} 
+              label={label} 
               side="target" 
               color={`var(--handle-color-${inputs[handleId].type})`} 
               visible={showLabels}
@@ -55,6 +82,7 @@ export function SubFlowNode({ id, data, selected }: NodeProps<SubFlowNodeType>) 
       {/* Dynamic Output Handles */}
       {outputKeys.map((handleId, index) => {
         const top = `${((index + 1) * 100) / (outputKeys.length + 1)}%`;
+        const label = resolveLabel(handleId, outputs[handleId]);
         return (
           <React.Fragment key={handleId}>
             <Handle
@@ -65,7 +93,7 @@ export function SubFlowNode({ id, data, selected }: NodeProps<SubFlowNodeType>) 
               style={{ top }}
             />
             <HandleLabel 
-              label={handleId} 
+              label={label} 
               side="source" 
               color={`var(--handle-color-${outputs[handleId].type})`} 
               visible={showLabels}
