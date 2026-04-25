@@ -19,6 +19,8 @@ export function SubFlowNode({ id, data, selected }: NodeProps<SubFlowNodeType>) 
   }, [id, diveIn]);
 
   const { inputs, outputs } = data.interfaceMapping;
+  const inputKeys = Object.keys(inputs);
+  const outputKeys = Object.keys(outputs);
 
   return (
     <BaseNode
@@ -28,40 +30,50 @@ export function SubFlowNode({ id, data, selected }: NodeProps<SubFlowNodeType>) 
       onDoubleClick={handleDoubleClick}
     >
       {/* Dynamic Input Handles */}
-      {Object.keys(inputs).map((handleId) => (
-        <React.Fragment key={handleId}>
-          <Handle
-            type="target"
-            position={Position.Left}
-            id={handleId}
-            data-handletype={inputs[handleId].type}
-          />
-          <HandleLabel 
-            label={handleId} 
-            side="target" 
-            color={`var(--handle-color-${inputs[handleId].type})`} 
-            visible={showLabels} 
-          />
-        </React.Fragment>
-      ))}
+      {inputKeys.map((handleId, index) => {
+        const top = `${((index + 1) * 100) / (inputKeys.length + 1)}%`;
+        return (
+          <React.Fragment key={handleId}>
+            <Handle
+              type="target"
+              position={Position.Left}
+              id={handleId}
+              data-handletype={inputs[handleId].type}
+              style={{ top }}
+            />
+            <HandleLabel 
+              label={handleId} 
+              side="target" 
+              color={`var(--handle-color-${inputs[handleId].type})`} 
+              visible={showLabels}
+              top={top}
+            />
+          </React.Fragment>
+        );
+      })}
 
       {/* Dynamic Output Handles */}
-      {Object.keys(outputs).map((handleId) => (
-        <React.Fragment key={handleId}>
-          <Handle
-            type="source"
-            position={Position.Right}
-            id={handleId}
-            data-handletype={outputs[handleId].type}
-          />
-          <HandleLabel 
-            label={handleId} 
-            side="source" 
-            color={`var(--handle-color-${outputs[handleId].type})`} 
-            visible={showLabels} 
-          />
-        </React.Fragment>
-      ))}
+      {outputKeys.map((handleId, index) => {
+        const top = `${((index + 1) * 100) / (outputKeys.length + 1)}%`;
+        return (
+          <React.Fragment key={handleId}>
+            <Handle
+              type="source"
+              position={Position.Right}
+              id={handleId}
+              data-handletype={outputs[handleId].type}
+              style={{ top }}
+            />
+            <HandleLabel 
+              label={handleId} 
+              side="source" 
+              color={`var(--handle-color-${outputs[handleId].type})`} 
+              visible={showLabels}
+              top={top}
+            />
+          </React.Fragment>
+        );
+      })}
 
       <div className="flex flex-col items-center gap-3 py-4">
         <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
