@@ -110,6 +110,7 @@ export interface SubFlowNodeData extends BaseNodeData {
     inputs: { [externalHandleId: string]: { nodeId: string; handleId: string; type: string } };
     outputs: { [externalHandleId: string]: { nodeId: string; handleId: string; type: string } };
   };
+  previewMedia?: string | null;
   status: NodeStatus;
   error: string | null;
 }

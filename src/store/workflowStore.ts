@@ -26,6 +26,7 @@ import {
   CanvasNavigationSettings,
   MatchMode,
   MODEL_DISPLAY_NAMES,
+  SaveTemplateRequest,
 } from "@/types";
 import { UndoManager, UndoSnapshot, clonePreservingStrings } from "./undoHistory";
 import { useToast } from "@/components/Toast";
@@ -307,6 +308,10 @@ interface WorkflowStore {
   }>;
   diveIn: (nodeId: string) => void;
   diveOut: () => void;
+
+  // Subflow template actions
+  saveSubFlowAsTemplate: (request: SaveTemplateRequest) => Promise<boolean>;
+  loadSubFlowTemplate: (subflowId: string, templateName: string, version?: number) => Promise<boolean>;
 
   // Global Image History
   globalImageHistory: ImageHistoryItem[];
@@ -610,6 +615,38 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
       edges: lastLevel.edges,
       groups: lastLevel.groups,
     });
+  },
+
+  saveSubFlowAsTemplate: async (request: SaveTemplateRequest) => {
+    try {
+      const response = await fetch("/api/subflow-templates/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error("Failed to save subflow template:", error);
+      return false;
+    }
+  },
+
+  loadSubFlowTemplate: async (subflowId: string, templateName: string, version?: number) => {
+    try {
+      let url = `/api/subflow-templates/load?name=${encodeURIComponent(templateName)}`;
+      if (version !== undefined) {
+        url += `&version=${version}`;
+      }
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to load template");
+
+      const { workflow } = await response.json();
+      get().updateNodeData(subflowId, { subgraph: workflow });
+      return true;
+    } catch (error) {
+      console.error("Failed to load subflow template:", error);
+      return false;
+    }
   },
 
   // Auto-save initial state

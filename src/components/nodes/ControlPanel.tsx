@@ -4,9 +4,11 @@ import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Node } from "@xyflow/react";
 import { useWorkflowStore, saveNanoBananaDefaults, useProviderApiKeys } from "@/store/workflowStore";
-import { NodeType, NanoBananaNodeData, LLMGenerateNodeData, GenerateVideoNodeData, Generate3DNodeData, GenerateAudioNodeData, EaseCurveNodeData, ConditionalSwitchNodeData, AspectRatio, Resolution, ModelType, MODEL_DISPLAY_NAMES, ProviderType, SelectedModel, LLMProvider, LLMModelType, MatchMode, ConditionalSwitchRule } from "@/types";
+import { NodeType, NanoBananaNodeData, LLMGenerateNodeData, GenerateVideoNodeData, Generate3DNodeData, GenerateAudioNodeData, EaseCurveNodeData, ConditionalSwitchNodeData, AspectRatio, Resolution, ModelType, MODEL_DISPLAY_NAMES, ProviderType, SelectedModel, LLMProvider, LLMModelType, MatchMode, ConditionalSwitchRule, SubFlowNodeData } from "@/types";
 import { ProviderModel, ModelCapability } from "@/lib/providers/types";
 import { ModelSearchDialog } from "@/components/modals/ModelSearchDialog";
+import { TemplateSaveModal } from "../modals/TemplateSaveModal";
+import { TemplateBrowserModal } from "../modals/TemplateBrowserModal";
 import { ModelParameters } from "./ModelParameters";
 import { CubicBezierEditor } from "@/components/CubicBezierEditor";
 import { deduplicatedFetch } from "@/utils/deduplicatedFetch";
@@ -208,6 +210,9 @@ function SubFlowControls({ node }: { node: Node }) {
   const toggleSubFlowLink = useWorkflowStore((state) => state.toggleSubFlowLink);
   const diveIn = useWorkflowStore((state) => state.diveIn);
 
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isBrowserModalOpen, setIsBrowserModalOpen] = useState(false);
+
   const handleNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       updateNodeData(node.id, { name: e.target.value });
@@ -236,6 +241,26 @@ function SubFlowControls({ node }: { node: Node }) {
              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
           </svg>
           Dive Into Subflow
+        </button>
+
+        <button
+          onClick={() => setIsBrowserModalOpen(true)}
+          className="nodrag nopan w-full px-3 py-2 bg-neutral-700 hover:bg-neutral-600 text-neutral-200 text-xs font-medium rounded border border-neutral-600 transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          Browse Templates
+        </button>
+
+        <button
+          onClick={() => setIsSaveModalOpen(true)}
+          className="nodrag nopan w-full px-3 py-2 bg-neutral-700 hover:bg-neutral-600 text-neutral-200 text-xs font-medium rounded border border-neutral-600 transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Save as Template
         </button>
 
         <button
@@ -335,6 +360,19 @@ function SubFlowControls({ node }: { node: Node }) {
           </div>
         )}
       </div>
+
+      <TemplateSaveModal 
+        isOpen={isSaveModalOpen} 
+        onClose={() => setIsSaveModalOpen(false)} 
+        subflowId={node.id} 
+        initialName={nodeData.name || "My Subflow"}
+        previewImage={nodeData.previewMedia || undefined}
+      />
+      <TemplateBrowserModal 
+        isOpen={isBrowserModalOpen} 
+        onClose={() => setIsBrowserModalOpen(false)} 
+        subflowId={node.id} 
+      />
     </div>
   );
 }

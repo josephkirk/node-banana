@@ -16,6 +16,7 @@ type SubFlowNodeType = Node<SubFlowNodeData, "subflow">;
 export function SubFlowNode({ id, data, selected }: NodeProps<SubFlowNodeType>) {
   const diveIn = useWorkflowStore((state) => state.diveIn);
   const executeWorkflow = useWorkflowStore((state) => state.executeWorkflow);
+  const updateNodeData = useWorkflowStore((state) => state.updateNodeData);
   const updateSubFlowInternalNodeData = useWorkflowStore((state) => state.updateSubFlowInternalNodeData);
   const showLabels = useShowHandleLabels(selected);
 
@@ -85,6 +86,13 @@ export function SubFlowNode({ id, data, selected }: NodeProps<SubFlowNodeType>) 
     (previewNode.data as any).outputVideo || 
     (previewNode.data as any).outputAudio
   ) : null;
+
+  // Sync previewMedia to store so ControlPanel can access it for template saving
+  React.useEffect(() => {
+    if (previewMedia && previewMedia !== data.previewMedia) {
+      updateNodeData(id, { previewMedia });
+    }
+  }, [previewMedia, id, data.previewMedia, updateNodeData]);
 
   // Find all internal nodes that should have exposed controls
   // Currently we support floatInput nodes. We prioritize those mapped in inputs.
