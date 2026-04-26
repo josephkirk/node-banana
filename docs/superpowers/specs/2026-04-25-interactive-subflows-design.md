@@ -8,11 +8,12 @@ Enable direct interaction with internal `floatInput` nodes from the parent `SubF
 - **Create:** `src/components/nodes/InputControls.tsx`.
 - **Move:** `Rotator`, `SliderUI`, and `Spinner` components from `FloatInputNode.tsx` to this new file.
 - These components will be pure UI components that accept `value`, `min`, `max`, `step`, and an `onChange` callback.
+- **Support Compact Mode:** Components should support hiding the numeric value display to maintain a clean surface on the Subflow node.
 
 ### Subflow Surface Mapping
 - `SubFlowNode.tsx` will scan its `data.subgraph.nodes` during render.
 - For each entry in `interfaceMapping.inputs`, it will check if the corresponding internal node is a `floatInput`.
-- If matched, it will render the specific display type (`slider`, `spinner`, `rotator`) on the Subflow node's body.
+- If matched, it will render the control in a grid stack with a small name header above it.
 
 ## 2. Interactive Behavior
 
@@ -37,10 +38,12 @@ Enable direct interaction with internal `floatInput` nodes from the parent `SubF
   - **Fallback:** Enabled if a fallback mapping exists.
 
 ### Layout
-- The Subflow node will adopt a "Generate-like" layout:
-  - Top: Preview area (if output exists).
-  - Middle: Interactive surface controls (mapped float inputs).
-  - Bottom: "Dive In" button and node metadata.
+- The Subflow node will adopt a specialized "Control Surface" layout:
+  - **Top:** A square result preview box (filling the top of the node if media exists).
+  - **Middle:** A grid/stack of interactive surface controls (mapped float inputs).
+    - Each control has a **name header** (derived from node title or variable name).
+    - Controls do **not** show the numeric value (compact display).
+  - **Bottom:** "Dive In" button and subflow metadata.
 
 ## 4. Testing Strategy
 - **Unit Tests:** Verify that `resolveLabel` correctly finds custom names and handle IDs.
