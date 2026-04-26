@@ -35,7 +35,8 @@ export async function executeGenerateAudio(
 
   const { useStoredFallback = false } = options;
 
-  const { text: connectedText, dynamicInputs } = getConnectedInputs(node.id);
+  const { text: connectedText, dynamicInputs: rawDynamicInputs } = getConnectedInputs(node.id);
+  const dynamicInputs = rawDynamicInputs || {};
 
   // Get fresh node data from store
   const freshNode = getFreshNode(node.id);

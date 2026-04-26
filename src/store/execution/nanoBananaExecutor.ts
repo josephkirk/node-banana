@@ -42,7 +42,8 @@ export async function executeNanoBanana(
 
   const { useStoredFallback = false } = options;
 
-  const { images: connectedImages, text: connectedText, dynamicInputs } = getConnectedInputs(node.id);
+  const { images: connectedImages, text: connectedText, dynamicInputs: rawDynamicInputs } = getConnectedInputs(node.id);
+  const dynamicInputs = rawDynamicInputs || {};
 
   // Get fresh node data from store
   const freshNode = getFreshNode(node.id);

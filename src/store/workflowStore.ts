@@ -13,6 +13,7 @@ import {
   WorkflowNode,
   WorkflowEdge,
   NodeType,
+  SubFlowNodeData,
   NanoBananaNodeData,
   OutputGalleryNodeData,
   WorkflowNodeData,
@@ -232,6 +233,7 @@ interface WorkflowStore {
   // Node operations
   addNode: (type: NodeType, position: XYPosition, initialData?: Partial<WorkflowNodeData>) => string;
   updateNodeData: (nodeId: string, data: Partial<WorkflowNodeData>) => void;
+  updateSubFlowInternalNodeData: (subflowId: string, internalNodeId: string, data: Partial<WorkflowNodeData>) => void;
   removeNode: (nodeId: string) => void;
   onNodesChange: (changes: NodeChange<WorkflowNode>[]) => void;
 
@@ -810,6 +812,58 @@ const workflowStoreImpl: StateCreator<WorkflowStore> = (set, get) => ({
     if (node?.type === "conditionalSwitch" && ("rules" in data || "evaluationPaused" in data)) {
       get().recomputeDimmedNodes();
     }
+  },
+
+  updateSubFlowInternalNodeData: (subflowId: string, internalNodeId: string, data: Partial<WorkflowNodeData>) => {
+    const { nodes } = get();
+    const subflowNode = nodes.find((n) => n.id === subflowId);
+    
+    if (!subflowNode || subflowNode.type !== "subflow") return;
+
+    const subflowData = subflowNode.data as SubFlowNodeData;
+    if (!subflowData.subgraph) return;
+
+    // Create undo snapshot if not already pending
+    if (!get().isRunning && !deleteCheckpointActive) {
+      if (!pendingDataSnapshot) {
+        pendingDataSnapshot = captureUndoSnapshot(get());
+      }
+      if (dataChangeTimer) clearTimeout(dataChangeTimer);
+      dataChangeTimer = setTimeout(() => {
+        if (pendingDataSnapshot) {
+          undoManager.push(pendingDataSnapshot);
+          pendingDataSnapshot = null;
+          syncUndoFlags(set);
+        }
+        dataChangeTimer = null;
+      }, 500);
+    }
+
+    // Update internal node
+    const updatedInternalNodes = subflowData.subgraph.nodes.map((n) => 
+      n.id === internalNodeId 
+        ? { ...n, data: { ...n.data, ...data } as WorkflowNodeData }
+        : n
+    );
+
+    // Update parent subflow node
+    set((state) => ({
+      nodes: state.nodes.map((n) => 
+        n.id === subflowId 
+          ? { 
+              ...n, 
+              data: { 
+                ...n.data, 
+                subgraph: { 
+                  ...subflowData.subgraph, 
+                  nodes: updatedInternalNodes 
+                } 
+              } as SubFlowNodeData 
+            }
+          : n
+      ),
+      hasUnsavedChanges: true,
+    }));
   },
 
   removeNode: (nodeId: string) => {

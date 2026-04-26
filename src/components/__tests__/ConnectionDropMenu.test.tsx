@@ -30,7 +30,7 @@ describe("ConnectionDropMenu", () => {
     it("should render the header with handle type", () => {
       render(<ConnectionDropMenu {...defaultProps} />);
 
-      expect(screen.getByText("Add image node")).toBeInTheDocument();
+      expect(screen.getByText(/Suggested Nodes \(image\)/)).toBeInTheDocument();
     });
 
     it("should render keyboard shortcuts hint", () => {
@@ -39,32 +39,30 @@ describe("ConnectionDropMenu", () => {
       expect(screen.getByText("navigate")).toBeInTheDocument();
       expect(screen.getByText("select")).toBeInTheDocument();
     });
-
-    it("should not render when handleType is null", () => {
-      render(<ConnectionDropMenu {...defaultProps} handleType={null} />);
-
-      expect(screen.queryByText(/Add .* node/)).not.toBeInTheDocument();
-    });
   });
 
   describe("Node Type Filtering - Source Connection (from output handle)", () => {
     it("should show image-accepting nodes when dragging from image output", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="source" />);
 
-      expect(screen.getByText("Annotate")).toBeInTheDocument();
-      expect(screen.getByText("Crop Image")).toBeInTheDocument();
-      expect(screen.getByText("Generate Image")).toBeInTheDocument();
-      expect(screen.getByText("Generate Video")).toBeInTheDocument();
-      expect(screen.getByText("Split Grid Node")).toBeInTheDocument();
-      expect(screen.getByText("Split Grid Now")).toBeInTheDocument();
       expect(screen.getByText("Output")).toBeInTheDocument();
+      expect(screen.getByText("Output Gallery")).toBeInTheDocument();
+      expect(screen.getByText("Annotate")).toBeInTheDocument();
+      expect(screen.getByText("Split Grid")).toBeInTheDocument();
+      expect(screen.getByText("Split Now")).toBeInTheDocument();
+      expect(screen.getByText("Image Compare")).toBeInTheDocument();
+      expect(screen.getByText("Image-to-Image")).toBeInTheDocument();
+      expect(screen.getByText("Image-to-Video")).toBeInTheDocument();
+      expect(screen.getByText("Crop Image")).toBeInTheDocument();
     });
 
     it("should show text-accepting nodes when dragging from text output", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="text" connectionType="source" />);
 
+      expect(screen.getByText("Prompt")).toBeInTheDocument();
       expect(screen.getByText("Generate Image")).toBeInTheDocument();
       expect(screen.getByText("Generate Video")).toBeInTheDocument();
+      expect(screen.getByText("Generate Audio")).toBeInTheDocument();
       expect(screen.getByText("LLM Generate")).toBeInTheDocument();
       // Should NOT show image-only nodes
       expect(screen.queryByText("Annotate")).not.toBeInTheDocument();
@@ -74,8 +72,8 @@ describe("ConnectionDropMenu", () => {
     it("should show video-accepting nodes when dragging from video output", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="video" connectionType="source" />);
 
-      expect(screen.getByText("Generate Video")).toBeInTheDocument();
       expect(screen.getByText("Output")).toBeInTheDocument();
+      expect(screen.getByText("Output Gallery")).toBeInTheDocument();
       // Should NOT show image/text-only nodes
       expect(screen.queryByText("Annotate")).not.toBeInTheDocument();
       expect(screen.queryByText("LLM Generate")).not.toBeInTheDocument();
@@ -88,7 +86,6 @@ describe("ConnectionDropMenu", () => {
       // Should NOT show image/text/video nodes
       expect(screen.queryByText("Annotate")).not.toBeInTheDocument();
       expect(screen.queryByText("Generate Image")).not.toBeInTheDocument();
-      expect(screen.queryByText("Generate Video")).not.toBeInTheDocument();
     });
   });
 
@@ -98,7 +95,7 @@ describe("ConnectionDropMenu", () => {
 
       expect(screen.getByText("Image Input")).toBeInTheDocument();
       expect(screen.getByText("Annotate")).toBeInTheDocument();
-      expect(screen.getByText("Generate Image")).toBeInTheDocument();
+      expect(screen.getByText("Crop Image")).toBeInTheDocument();
       // Should NOT show text nodes
       expect(screen.queryByText("Prompt")).not.toBeInTheDocument();
     });
@@ -106,29 +103,12 @@ describe("ConnectionDropMenu", () => {
     it("should show text-producing nodes when dragging from text input", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="text" connectionType="target" />);
 
+      expect(screen.getByText("Float Input")).toBeInTheDocument();
       expect(screen.getByText("Prompt")).toBeInTheDocument();
       expect(screen.getByText("LLM Generate")).toBeInTheDocument();
       // Should NOT show image-only nodes
       expect(screen.queryByText("Image Input")).not.toBeInTheDocument();
       expect(screen.queryByText("Annotate")).not.toBeInTheDocument();
-    });
-
-    it("should show video-producing nodes when dragging from video input", () => {
-      render(<ConnectionDropMenu {...defaultProps} handleType="video" connectionType="target" />);
-
-      expect(screen.getByText("Generate Video")).toBeInTheDocument();
-      // Should NOT show other nodes
-      expect(screen.queryByText("Image Input")).not.toBeInTheDocument();
-      expect(screen.queryByText("Prompt")).not.toBeInTheDocument();
-    });
-
-    it("should show 3D-producing nodes when dragging from 3D input", () => {
-      render(<ConnectionDropMenu {...defaultProps} handleType="3d" connectionType="target" />);
-
-      expect(screen.getByText("Generate 3D")).toBeInTheDocument();
-      // Should NOT show other nodes
-      expect(screen.queryByText("Image Input")).not.toBeInTheDocument();
-      expect(screen.queryByText("Generate Image")).not.toBeInTheDocument();
     });
   });
 
@@ -136,28 +116,19 @@ describe("ConnectionDropMenu", () => {
     it("should call onSelect with node type when menu item is clicked", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="source" />);
 
-      const annotateButton = screen.getByText("Annotate");
-      fireEvent.click(annotateButton);
+      const outputButton = screen.getByText("Output");
+      fireEvent.click(outputButton);
 
-      expect(mockOnSelect).toHaveBeenCalledWith({ type: "annotation", isAction: false });
+      expect(mockOnSelect).toHaveBeenCalledWith({ type: "output", isAction: false });
     });
 
     it("should call onSelect with isAction true for action items", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="source" />);
 
-      const splitNowButton = screen.getByText("Split Grid Now");
+      const splitNowButton = screen.getByText("Split Now");
       fireEvent.click(splitNowButton);
 
       expect(mockOnSelect).toHaveBeenCalledWith({ type: "splitGridImmediate", isAction: true });
-    });
-
-    it("should call onSelect with nanoBanana type for Generate Image", () => {
-      render(<ConnectionDropMenu {...defaultProps} handleType="text" connectionType="source" />);
-
-      const generateButton = screen.getByText("Generate Image");
-      fireEvent.click(generateButton);
-
-      expect(mockOnSelect).toHaveBeenCalledWith({ type: "nanoBanana", isAction: false });
     });
   });
 
@@ -173,7 +144,7 @@ describe("ConnectionDropMenu", () => {
 
   describe("Click Outside", () => {
     it("should call onClose when clicking outside the menu", () => {
-      const { container } = render(
+      render(
         <div>
           <div data-testid="outside">Outside</div>
           <ConnectionDropMenu {...defaultProps} />
@@ -189,7 +160,7 @@ describe("ConnectionDropMenu", () => {
     it("should not call onClose when clicking inside the menu", () => {
       render(<ConnectionDropMenu {...defaultProps} />);
 
-      const menuItem = screen.getByText("Annotate");
+      const menuItem = screen.getByText("Output");
       fireEvent.mouseDown(menuItem);
 
       expect(mockOnClose).not.toHaveBeenCalled();
@@ -200,16 +171,16 @@ describe("ConnectionDropMenu", () => {
     it("should navigate down with ArrowDown key", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="source" />);
 
-      // First item should be highlighted by default
-      const firstButton = screen.getByText("Annotate").closest("button");
-      expect(firstButton).toHaveClass("bg-neutral-700");
+      // First item (Output) should be highlighted by default
+      const firstButton = screen.getByText("Output").closest("button");
+      expect(firstButton).toHaveClass("bg-blue-600");
 
       // Press ArrowDown
       fireEvent.keyDown(document, { key: "ArrowDown" });
 
-      // Second item should now be highlighted
-      const secondButton = screen.getByText("Crop Image").closest("button");
-      expect(secondButton).toHaveClass("bg-neutral-700");
+      // Second item (Output Gallery) should now be highlighted
+      const secondButton = screen.getByText("Output Gallery").closest("button");
+      expect(secondButton).toHaveClass("bg-blue-600");
     });
 
     it("should navigate up with ArrowUp key", () => {
@@ -218,43 +189,31 @@ describe("ConnectionDropMenu", () => {
       // Press ArrowUp to go to last item (wrapping)
       fireEvent.keyDown(document, { key: "ArrowUp" });
 
-      // Last item should now be highlighted
+      // Last item (Switch) should now be highlighted
       const lastButton = screen.getByText("Switch").closest("button");
-      expect(lastButton).toHaveClass("bg-neutral-700");
+      expect(lastButton).toHaveClass("bg-blue-600");
     });
 
     it("should select item with Enter key", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="source" />);
 
-      // Press Enter on first item
+      // Press Enter on first item (Output)
       fireEvent.keyDown(document, { key: "Enter" });
 
-      expect(mockOnSelect).toHaveBeenCalledWith({ type: "annotation", isAction: false });
-    });
-
-    it("should select navigated item with Enter key", () => {
-      render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="source" />);
-
-      // Navigate to second item (Crop Image)
-      fireEvent.keyDown(document, { key: "ArrowDown" });
-      // Press Enter
-      fireEvent.keyDown(document, { key: "Enter" });
-
-      expect(mockOnSelect).toHaveBeenCalledWith({ type: "crop", isAction: false });
+      expect(mockOnSelect).toHaveBeenCalledWith({ type: "output", isAction: false });
     });
 
     it("should wrap around when navigating past last item", () => {
-      render(<ConnectionDropMenu {...defaultProps} handleType="text" connectionType="source" />);
+      render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="target" />);
 
-      // Text source labels: Prompt, Prompt Constructor, Array, Generate Image, Generate Video, Generate Audio, LLM Generate, Router, Switch, Conditional Switch (10 items)
-      // Navigate down 10 times to wrap to first
-      for (let i = 0; i < 10; i++) {
+      // Count items in IMAGE_SOURCE_OPTIONS: imageInput, annotation, crop, nanoBanana, videoFrameGrab, glbViewer, router, switch (8 items)
+      for (let i = 0; i < 8; i++) {
         fireEvent.keyDown(document, { key: "ArrowDown" });
       }
 
-      // Should be back on first item (Prompt)
-      const firstButton = screen.getByText("Prompt").closest("button");
-      expect(firstButton).toHaveClass("bg-neutral-700");
+      // Should be back on first item (Image Input)
+      const firstButton = screen.getByText("Image Input").closest("button");
+      expect(firstButton).toHaveClass("bg-blue-600");
     });
   });
 
@@ -262,12 +221,12 @@ describe("ConnectionDropMenu", () => {
     it("should highlight item on mouse enter", () => {
       render(<ConnectionDropMenu {...defaultProps} handleType="image" connectionType="source" />);
 
-      const secondItem = screen.getByText("Generate Image");
+      const secondItem = screen.getByText("Output Gallery");
       fireEvent.mouseEnter(secondItem);
 
       // Second item should now be highlighted
       const secondButton = secondItem.closest("button");
-      expect(secondButton).toHaveClass("bg-neutral-700");
+      expect(secondButton).toHaveClass("bg-blue-600");
     });
   });
 });

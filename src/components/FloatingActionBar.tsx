@@ -501,6 +501,7 @@ export function FloatingActionBar() {
         <NodeButton type="imageInput" label="Image" dataTutorial="image-button" />
         <NodeButton type="videoInput" label="Video" />
         <NodeButton type="prompt" label="Prompt" dataTutorial="prompt-button" />
+        <NodeButton type="subflow" label="Subflow" />
         <GenerateComboButton />
         <NodeButton type="output" label="Output" dataTutorial="output-button" />
         <AllNodesMenu />

@@ -23,40 +23,7 @@ import { useShallow } from "zustand/shallow";
 import { useToast } from "@/components/Toast";
 import { Breadcrumbs } from "./Breadcrumbs";
 import { CanvasContextMenu } from "./CanvasContextMenu";
-import dynamic from "next/dynamic";
-import {
-  ImageInputNode,
-  AudioInputNode,
-  VideoInputNode,
-  AnnotationNode,
-  PromptNode,
-  ArrayNode,
-  PromptConstructorNode,
-  GenerateImageNode,
-  GenerateVideoNode,
-  Generate3DNode,
-  GenerateAudioNode,
-  LLMGenerateNode,
-  SplitGridNode,
-  OutputNode,
-  OutputGalleryNode,
-  ImageCompareNode,
-  VideoStitchNode,
-  EaseCurveNode,
-  VideoTrimNode,
-  VideoFrameGrabNode,
-  RouterNode,
-  SwitchNode,
-  ConditionalSwitchNode,
-  CropNode,
-  SubFlowNode,
-  FloatInputNode,
-} from "./nodes";
-
-
-// Lazy-load GLBViewerNode to avoid bundling three.js for users who don't use 3D nodes
-const GLBViewerNode = dynamic(() => import("./nodes/GLBViewerNode").then(mod => ({ default: mod.GLBViewerNode })), { ssr: false });
-import { EditableEdge, ReferenceEdge, SharedEdgeGradients } from "./edges";
+import { SharedEdgeGradients } from "./edges";
 import { ConnectionDropMenu, MenuAction } from "./ConnectionDropMenu";
 import { MultiSelectToolbar } from "./MultiSelectToolbar";
 import { EdgeToolbar } from "./EdgeToolbar";
@@ -88,217 +55,24 @@ import { createPortal } from "react-dom";
 import { useAnnotationStore } from "@/store/annotationStore";
 import { TutorialOverlay } from "./onboarding/TutorialOverlay";
 import { useFTUXStore } from "@/store/ftuxStore";
+import { nodeTypes, edgeTypes } from "./flowTypes";
+import { 
+  getHandleType, 
+  getNodeHandles, 
+  ConnectionDropState, 
+  isMacOS, 
+  isMouseWheel, 
+  findScrollableAncestor, 
+  isPanningRef, 
+  isDraggingNodeRef 
+} from "./flowUtils";
 
 // Connection validation rules
 // - Image handles (green) can only connect to image handles
 // - Text handles (blue) can only connect to text handles
 // - Video handles can only connect to generateVideo or output nodes
-// Helper to determine handle type from handle ID
-// For dynamic handles, we use naming convention: image inputs contain "image", text inputs are "prompt" or "negative_prompt"
-const getHandleType = (handleId: string | null | undefined): "image" | "text" | "video" | "audio" | "3d" | "easeCurve" | null => {
-  if (!handleId) return null;
-  // Generic Router handles — return null to allow any type connection
-  if (handleId === "generic-input" || handleId === "generic-output") return null;
-  // EaseCurve handles (must check before other types)
-  if (handleId === "easeCurve") return "easeCurve";
-  // 3D handles
-  if (handleId === "3d") return "3d";
-  // Standard handles
-  if (handleId === "video") return "video";
-  if (handleId === "audio" || handleId.startsWith("audio")) return "audio";
-  if (handleId === "image" || handleId === "text" || handleId === "value" || handleId === "float") return handleId === "image" ? "image" : "text";
-  // Dynamic handles - check naming patterns (including indexed: text-0, image-0)
-  if (handleId.includes("video")) return "video";
-  if (handleId.startsWith("image-") || handleId.includes("image") || handleId.includes("frame")) return "image";
-  if (handleId.startsWith("text-") || handleId === "prompt" || handleId === "negative_prompt" || handleId.includes("prompt") || handleId.includes("value") || handleId.includes("float")) return "text";
-  return null;
-};
-
-// Define which handles each node type has
-const getNodeHandles = (nodeType: string): { inputs: string[]; outputs: string[] } => {
-  switch (nodeType) {
-    case "floatInput":
-      return { inputs: [], outputs: ["value"] };
-    case "imageInput":
-      return { inputs: ["reference"], outputs: ["image"] };
-    case "audioInput":
-      return { inputs: ["audio"], outputs: ["audio"] };
-    case "videoInput":
-      return { inputs: ["video"], outputs: ["video"] };
-    case "annotation":
-      return { inputs: ["image"], outputs: ["image"] };
-    case "prompt":
-      return { inputs: ["text"], outputs: ["text"] };
-    case "array":
-      return { inputs: ["text"], outputs: ["text"] };
-    case "promptConstructor":
-      return { inputs: ["text"], outputs: ["text"] };
-    case "nanoBanana":
-      return { inputs: ["image", "text"], outputs: ["image"] };
-    case "generateVideo":
-      return { inputs: ["image", "text", "audio"], outputs: ["video"] };
-    case "generate3d":
-      return { inputs: ["image", "text"], outputs: ["3d"] };
-    case "generateAudio":
-      return { inputs: ["text"], outputs: ["audio"] };
-    case "llmGenerate":
-      return { inputs: ["text", "image"], outputs: ["text"] };
-    case "splitGrid":
-      return { inputs: ["image"], outputs: ["reference"] };
-    case "output":
-      return { inputs: ["image", "video", "audio"], outputs: [] };
-    case "outputGallery":
-      return { inputs: ["image", "video"], outputs: [] };
-    case "imageCompare":
-      return { inputs: ["image"], outputs: [] };
-    case "videoStitch":
-      return { inputs: ["video", "audio"], outputs: ["video"] };
-    case "easeCurve":
-      return { inputs: ["video", "easeCurve"], outputs: ["video", "easeCurve"] };
-    case "videoTrim":
-      return { inputs: ["video"], outputs: ["video"] };
-    case "videoFrameGrab":
-      return { inputs: ["video"], outputs: ["image"] };
-    case "crop":
-      return { inputs: ["image"], outputs: ["image"] };
-    case "subflow":
-      return { inputs: [], outputs: [] }; // Handles managed dynamically in SubFlowNode
-    case "router":
-      return { inputs: ["image", "text", "video", "audio", "3d", "easeCurve", "generic-input"], outputs: ["image", "text", "video", "audio", "3d", "easeCurve", "generic-output"] };
-    case "switch":
-      // Switch has one input handle (generic-input when disconnected, typed when connected)
-      // Output handles are dynamic based on switches array, all matching inputType
-      return { inputs: ["generic-input"], outputs: [] }; // Outputs handled dynamically in SwitchNode
-    case "conditionalSwitch":
-      // Conditional Switch has one text input and dynamic rule outputs + default
-      return { inputs: ["text"], outputs: [] }; // Outputs handled dynamically in ConditionalSwitchNode
-    case "glbViewer":
-      return { inputs: ["3d"], outputs: ["image"] };
-    default:
-      return { inputs: [], outputs: [] };
-  }
-};
-
-interface ConnectionDropState {
-  position: { x: number; y: number };
-  flowPosition: { x: number; y: number };
-  handleType: "image" | "text" | "video" | "audio" | "3d" | "easeCurve" | null;
-  connectionType: "source" | "target";
-  sourceNodeId: string | null;
-  sourceHandleId: string | null;
-}
-
-// Detect if running on macOS for platform-specific trackpad behavior
-const isMacOS = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-
-// Detect if a wheel event is from a mouse (vs trackpad)
-const isMouseWheel = (event: WheelEvent): boolean => {
-  // Mouse scroll wheel typically uses deltaMode 1 (lines) or has large discrete deltas
-  // Trackpad uses deltaMode 0 (pixels) with smaller, smoother deltas
-  if (event.deltaMode === 1) return true; // DOM_DELTA_LINE = mouse
-
-  // Fallback: large delta values suggest mouse wheel
-  const threshold = 50;
-  return Math.abs(event.deltaY) >= threshold &&
-         Math.abs(event.deltaY) % 40 === 0; // Mouse deltas often in multiples
-};
-
-// Check if an element can scroll and has room to scroll in the given direction
-const canElementScroll = (element: HTMLElement, deltaX: number, deltaY: number): boolean => {
-  const style = window.getComputedStyle(element);
-  const overflowY = style.overflowY;
-  const overflowX = style.overflowX;
-
-  const canScrollY = overflowY === 'auto' || overflowY === 'scroll';
-  const canScrollX = overflowX === 'auto' || overflowX === 'scroll';
-
-  // Check if there's room to scroll in the delta direction
-  if (canScrollY && deltaY !== 0) {
-    const hasVerticalScroll = element.scrollHeight > element.clientHeight;
-    if (hasVerticalScroll) {
-      // Check if we can scroll further in the delta direction
-      if (deltaY > 0 && element.scrollTop < element.scrollHeight - element.clientHeight) {
-        return true; // Can scroll down
-      }
-      if (deltaY < 0 && element.scrollTop > 0) {
-        return true; // Can scroll up
-      }
-    }
-  }
-
-  if (canScrollX && deltaX !== 0) {
-    const hasHorizontalScroll = element.scrollWidth > element.clientWidth;
-    if (hasHorizontalScroll) {
-      if (deltaX > 0 && element.scrollLeft < element.scrollWidth - element.clientWidth) {
-        return true; // Can scroll right
-      }
-      if (deltaX < 0 && element.scrollLeft > 0) {
-        return true; // Can scroll left
-      }
-    }
-  }
-
-  return false;
-};
-
-// Find if the target element or any ancestor is scrollable
-const findScrollableAncestor = (target: HTMLElement, deltaX: number, deltaY: number): HTMLElement | null => {
-  let current: HTMLElement | null = target;
-
-  while (current && !current.classList.contains('react-flow')) {
-    // Check for nowheel class (React Flow convention for elements that should handle their own scroll)
-    if (current.classList.contains('nowheel') || current.tagName === 'TEXTAREA') {
-      if (canElementScroll(current, deltaX, deltaY)) {
-        return current;
-      }
-    }
-    current = current.parentElement;
-  }
-
-  return null;
-};
-
-/** Shared ref so child components (BaseNode) can check panning state without re-rendering */
-export const isPanningRef = { current: false };
-/** Shared ref so child components (BaseNode) can skip hover updates during node drags */
-export const isDraggingNodeRef = { current: false };
 
 export function WorkflowCanvas() {
-  const nodeTypes = useMemo(() => ({
-    imageInput: ImageInputNode,
-    audioInput: AudioInputNode,
-    videoInput: VideoInputNode,
-    annotation: AnnotationNode,
-    prompt: PromptNode,
-    array: ArrayNode,
-    promptConstructor: PromptConstructorNode,
-    nanoBanana: GenerateImageNode,
-    generateVideo: GenerateVideoNode,
-    generate3d: Generate3DNode,
-    generateAudio: GenerateAudioNode,
-    llmGenerate: LLMGenerateNode,
-    splitGrid: SplitGridNode,
-    output: OutputNode,
-    outputGallery: OutputGalleryNode,
-    imageCompare: ImageCompareNode,
-    videoStitch: VideoStitchNode,
-    easeCurve: EaseCurveNode,
-    videoTrim: VideoTrimNode,
-    videoFrameGrab: VideoFrameGrabNode,
-    router: RouterNode,
-    switch: SwitchNode,
-    conditionalSwitch: ConditionalSwitchNode,
-    crop: CropNode,
-    subflow: SubFlowNode,
-    floatInput: FloatInputNode,
-    glbViewer: GLBViewerNode,
-  }), []);
-
-  const edgeTypes = useMemo(() => ({
-    editable: EditableEdge,
-    reference: ReferenceEdge,
-  }), []);
-
   const { nodes, edges, groups, isModalOpen, showQuickstart, navigationTarget, canvasNavigationSettings, dimmedNodeIds, skippedNodeIds } =
     useWorkflowStore(useShallow((state) => ({
       nodes: state.nodes,
@@ -2285,6 +2059,13 @@ export function WorkflowCanvas() {
           {allNodes.map((node) => {
             // Groups don't get floating headers
             if (node.type === "group" as any) return null;
+
+            // Subflows only get headers if they have outputs
+            if (node.type === "subflow") {
+              const outputs = (node.data as any)?.interfaceMapping?.outputs;
+              const hasOutputs = outputs && Object.keys(outputs).length > 0;
+              if (!hasOutputs) return null;
+            }
 
             const defaultWidth = defaultNodeDimensions[node.type as NodeType]?.width ?? 250;
             const headerWidth = node.measured?.width || (node.style?.width as number) || defaultWidth;

@@ -35,7 +35,8 @@ export async function executeGenerateVideo(
 
   const { useStoredFallback = false } = options;
 
-  const { images: connectedImages, text: connectedText, audio: connectedAudio, dynamicInputs } = getConnectedInputs(node.id);
+  const { images: connectedImages, text: connectedText, audio: connectedAudio, dynamicInputs: rawDynamicInputs } = getConnectedInputs(node.id);
+  const dynamicInputs = rawDynamicInputs || {};
 
   // Get fresh node data from store
   const freshNode = getFreshNode(node.id);

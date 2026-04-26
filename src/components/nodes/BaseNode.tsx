@@ -3,7 +3,7 @@
 import { ReactNode, useCallback, useRef, useLayoutEffect } from "react";
 import { Node, NodeResizer, OnResize, useReactFlow } from "@xyflow/react";
 import { useWorkflowStore } from "@/store/workflowStore";
-import { isPanningRef, isDraggingNodeRef } from "@/components/WorkflowCanvas";
+import { isPanningRef, isDraggingNodeRef } from "@/components/flowUtils";
 import { getMediaDimensions, calculateAspectFitSize } from "@/utils/nodeDimensions";
 
 const DEFAULT_NODE_DIMENSION = 300;
